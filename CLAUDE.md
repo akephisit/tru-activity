@@ -84,7 +84,7 @@ The main data model is defined in `lib/components/schemas.ts` with fields:
 - `limit`: string (limit value)
 - `reviewer`: string (assigned reviewer name)
 
-## Documentation and Version Checking
+## Documentation and Version Checking use context7
 
 ### Library Documentation Lookup
 
@@ -93,3 +93,8 @@ The main data model is defined in `lib/components/schemas.ts` with fields:
 - **TailwindCSS**: `tailwindcss.com/docs` - Utility-first CSS framework docs
 - **Zod**: `/colinhacks/zod` - Schema validation library documentation
 - **shadcn-svelte**: `/https://www.shadcn-svelte.com/docs` - UI component library documentation
+
+## Development Guidelines
+
+- Always explain in Thai language
+  - `อธิบายเป็นภาษาไทยเสมอ`
