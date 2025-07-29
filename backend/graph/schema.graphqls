@@ -490,15 +490,94 @@ type Mutation {
   refreshUserQRSecret(userID: ID!): QRData! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
 }
 
+input SubscriptionFilter {
+  facultyID: ID
+  activityID: ID
+  userID: ID
+  types: [String!]
+}
+
+type SubscriptionPayload {
+  type: String!
+  timestamp: Time!
+  data: SubscriptionData!
+  metadata: SubscriptionMetadata
+}
+
+union SubscriptionData = Activity | Participation | QRScanResult | SystemAlert | FacultyUpdate | NotificationLog
+
+type SystemAlert {
+  id: ID!
+  type: String!
+  message: String!
+  severity: AlertSeverity!
+  targetRoles: [UserRole!]!
+  facultyID: ID
+  expiresAt: Time
+  createdAt: Time!
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+type FacultyUpdate {
+  id: ID!
+  faculty: Faculty!
+  updateType: String!
+  message: String!
+  data: String
+  createdAt: Time!
+}
+
+type SubscriptionMetadata {
+  source: String
+  userId: ID
+  facultyId: ID
+  activityId: ID
+  correlationId: String
+}
+
+type ConnectionInfo {
+  id: String!
+  connectedAt: Time!
+  lastActivity: Time!
+  subscriptions: [String!]!
+  userId: ID!
+  userRole: UserRole!
+}
+
 type Subscription {
-  # Real-time updates for activities
-  activityUpdated(activityID: ID): Activity!
-  participationUpdated(activityID: ID): Participation!
+  # Personal notifications (Students + All roles)
+  personalNotifications(filter: SubscriptionFilter): SubscriptionPayload! @auth
   
-  # Subscription expiry notifications
-  subscriptionExpiryAlert(facultyID: ID): Subscription!
+  # Activity-specific updates (Activity participants + Admins)
+  activityUpdates(activityID: ID!): SubscriptionPayload! @auth
   
-  # Real-time QR scan notifications
-  qrScanned(activityID: ID): QRScanResult!
-  participationScanned(activityID: ID): Participation!
+  # Faculty-wide updates (Faculty members + Faculty/Super Admins)
+  facultyUpdates(facultyID: ID!): SubscriptionPayload! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  
+  # System-wide alerts (Admins only)
+  systemAlerts(filter: SubscriptionFilter): SubscriptionPayload! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  
+  # QR scan events (Assigned admins + Activity creators)
+  qrScanEvents(activityID: ID): SubscriptionPayload! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  
+  # Participation events (Participants + Admins)
+  participationEvents(activityID: ID, userID: ID): SubscriptionPayload! @auth
+  
+  # Subscription limit warnings (Faculty/Super Admins)
+  subscriptionWarnings(facultyID: ID): SubscriptionPayload! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Activity assignments (Regular Admins)
+  activityAssignments: SubscriptionPayload! @hasRole(roles: [REGULAR_ADMIN])
+  
+  # New activity notifications (Faculty members)
+  newActivities(facultyID: ID): SubscriptionPayload! @auth
+  
+  # Connection heartbeat (All authenticated users)
+  heartbeat: String! @auth
 }

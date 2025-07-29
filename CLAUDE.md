@@ -343,6 +343,206 @@ authCtx, err := middleware.RequireFacultyPermission(ctx, permissions.PermCreateA
 - Comprehensive audit logging
 - Secret rotation capability
 
+## GraphQL Subscriptions และ Real-time System
+
+ระบบ Real-time notifications ด้วย GraphQL Subscriptions, Redis PubSub และ Cloud Run optimization:
+
+### GraphQL Subscription Schema
+
+**Subscription Events:**
+- `personalNotifications` - Personal notifications สำหรับ authenticated users
+- `activityUpdates` - Activity-specific updates พร้อม access control
+- `facultyUpdates` - Faculty-wide updates สำหรับ faculty members
+- `systemAlerts` - System-wide alerts สำหรับ admins
+- `qrScanEvents` - QR scan events สำหรับ assigned admins
+- `participationEvents` - Participation events พร้อม role-based filtering
+- `subscriptionWarnings` - Subscription limit warnings
+- `activityAssignments` - Activity assignments สำหรับ Regular Admins
+- `newActivities` - New activity notifications
+- `heartbeat` - Connection health check
+
+### Role-based Subscription Access
+
+**Students:**
+- Personal notifications only
+- Activity updates สำหรับ activities ที่ participate
+- New activity notifications from their faculty
+
+**Regular Admins:**
+- Personal notifications
+- Assigned activity updates
+- QR scan events สำหรับ assigned activities
+- Activity assignment notifications
+
+**Faculty Admins:**
+- Faculty-wide updates
+- All faculty activity events
+- Subscription warnings สำหรับ faculty
+- System alerts
+
+**Super Admins:**
+- System-wide access ทุก subscription types
+- Cross-faculty notifications
+- System monitoring events
+
+### Redis PubSub Multi-instance Communication
+
+**PubSub Service:**
+- `backend/pkg/services/pubsub_service.go` - Redis PubSub implementation
+- Channel patterns สำหรับ different event types
+- Auto-reconnection และ health checking
+- Event filtering และ routing
+
+**Channel Architecture:**
+- `personal_notifications:{user_id}` - User-specific notifications
+- `activity_updates:{activity_id}` - Activity-specific events
+- `faculty_updates:{faculty_id}` - Faculty-wide events
+- `system_alerts` - System-wide alerts
+- `qr_scan_events:{activity_id}` - QR scanning events
+- Global patterns พร้อม wildcard support
+
+### Cloud Run Serverless Optimization
+
+**Connection Management:**
+- `backend/pkg/services/connection_manager.go` - Serverless-optimized connections
+- Connection pooling และ cleanup
+- Memory management สำหรับ limited resources
+- Graceful shutdown handling
+- Instance-aware connection tracking
+
+**Serverless Features:**
+- Idle connection cleanup (10-minute timeout)
+- Per-user connection limits (max 3 devices)
+- Automatic subscription restoration
+- Memory-efficient message buffering
+- Health check integration
+
+### Subscription Resolvers
+
+**Authentication & Authorization:**
+- `backend/pkg/resolvers/subscription_resolvers.go` - Complete resolver implementation
+- JWT-based authentication
+- Role-based access control
+- Faculty-scoped permissions
+- Activity-specific access validation
+
+**Connection Lifecycle:**
+- Connection establishment พร้อม metadata
+- Subscription management
+- Message filtering และ routing
+- Graceful disconnection
+- Error handling และ recovery
+
+### Event Publishing System
+
+**Event Publisher:**
+- `backend/pkg/services/event_publisher.go` - Comprehensive event publishing
+- Activity lifecycle events
+- Participation updates
+- QR scan results
+- System alerts และ warnings
+- Faculty management events
+
+**Event Types:**
+- Activity events (created, updated, status changed)
+- Participation events (registered, approved, attended)
+- QR scan events (successful, failed)
+- System alerts (info, warning, error, critical)
+- Subscription warnings (expiring, expired)
+
+### Frontend WebSocket Client
+
+**Auto-reconnection Client:**
+- `frontend/src/lib/services/subscription-client.ts` - Production-ready WebSocket client
+- Exponential backoff reconnection
+- Connection state management
+- Subscription restoration
+- Network status awareness
+
+**Client Features:**
+- Automatic reconnection with jitter
+- Connection health monitoring
+- Subscription lifecycle management
+- Message queuing และ buffering
+- Offline/online event handling
+- Page visibility optimization
+
+### Real-time Notification Center
+
+**Notification UI:**
+- `frontend/src/lib/components/NotificationCenter.svelte` - Complete notification interface
+- Real-time notification display
+- Priority-based sorting
+- Auto-hide functionality
+- Connection status indicator
+
+**Notification Features:**
+- Toast notifications สำหรับ high-priority alerts
+- Notification center พร้อม history
+- Sound notifications (optional)
+- Rich notification content
+- Action buttons และ dismissal
+- Responsive mobile design
+
+### GraphQL Schema Extensions
+
+**New Types:**
+- `SubscriptionPayload` - Unified subscription response
+- `SystemAlert` - System alert structure
+- `FacultyUpdate` - Faculty update events
+- `SubscriptionMetadata` - Event metadata
+- `ConnectionInfo` - Connection statistics
+
+**Union Types:**
+- `SubscriptionData` - Union of all subscription data types
+- Flexible data structure สำหรับ different event types
+
+### Performance Optimizations
+
+**Memory Management:**
+- Connection cleanup routines
+- Message buffer limits
+- Subscription restoration
+- Memory leak prevention
+- Resource monitoring
+
+**Network Efficiency:**
+- Message compression
+- Connection pooling
+- Heartbeat optimization
+- Bandwidth monitoring
+- Error recovery strategies
+
+### Monitoring และ Analytics
+
+**Connection Statistics:**
+- Active connection counts
+- Per-user connection tracking
+- Subscription analytics
+- Performance metrics
+- Error rate monitoring
+
+**Health Checks:**
+- Redis connectivity monitoring
+- WebSocket connection health
+- Memory usage tracking
+- Event throughput metrics
+- Error logging และ alerting
+
+### Security Implementation
+
+**Authentication:**
+- JWT token validation
+- Role-based subscription access
+- Faculty-scoped permissions
+- Activity-specific authorization
+
+**Data Protection:**
+- Message filtering based on permissions
+- Sensitive data masking
+- Audit logging
+- Rate limiting protection
+
 ### Development Workflow
 
 - เมื่อทำการเขียนโค้ด หรือพัฒนาเสร็จให้ทำการ อัปเดตใน CLAUDE.md ทุกครั้ง
