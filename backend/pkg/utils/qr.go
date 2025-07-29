@@ -6,10 +6,8 @@ import (
 )
 
 // GenerateQRSecret generates a random 32-character hex string for QR codes
-func GenerateQRSecret() (string, error) {
+func GenerateQRSecret() string {
 	bytes := make([]byte, 16) // 16 bytes = 32 hex characters
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
 }

@@ -52,3 +52,105 @@ func (u *User) CanManageFaculty(facultyID uint) bool {
 	}
 	return false
 }
+
+func (u *User) CanManageDepartment(departmentID uint) bool {
+	if u.Role == UserRoleSuperAdmin {
+		return true
+	}
+	if u.Role == UserRoleFacultyAdmin && u.FacultyID != nil {
+		return true // Faculty admin สามารถจัดการ department ในคณะตัวเองได้
+	}
+	if u.Role == UserRoleRegularAdmin && u.DepartmentID != nil && *u.DepartmentID == departmentID {
+		return true // Regular admin สามารถดู department ตัวเองได้
+	}
+	return false
+}
+
+func (u *User) CanViewUser(targetUser *User) bool {
+	if u.Role == UserRoleSuperAdmin {
+		return true
+	}
+	if u.Role == UserRoleFacultyAdmin {
+		// Faculty admin สามารถดู user ในคณะเดียวกัน
+		return u.FacultyID != nil && targetUser.FacultyID != nil && *u.FacultyID == *targetUser.FacultyID
+	}
+	if u.Role == UserRoleRegularAdmin {
+		// Regular admin สามารถดู student ในคณะเดียวกัน
+		return targetUser.Role == UserRoleStudent &&
+			u.FacultyID != nil && targetUser.FacultyID != nil && 
+			*u.FacultyID == *targetUser.FacultyID
+	}
+	// Student สามารถดูตัวเองได้เท่านั้น
+	return u.ID == targetUser.ID
+}
+
+func (u *User) CanCreateActivity() bool {
+	return u.Role == UserRoleSuperAdmin || u.Role == UserRoleFacultyAdmin
+}
+
+func (u *User) CanManageActivity(activity *Activity) bool {
+	if u.Role == UserRoleSuperAdmin {
+		return true
+	}
+	if u.Role == UserRoleFacultyAdmin {
+		// Faculty admin สามารถจัดการกิจกรรมในคณะตัวเอง หรือกิจกรรมที่ตนสร้าง
+		if u.ID == activity.CreatedByID {
+			return true
+		}
+		if activity.FacultyID != nil && u.FacultyID != nil && *activity.FacultyID == *u.FacultyID {
+			return true
+		}
+	}
+	// เจ้าของกิจกรรมสามารถจัดการได้
+	return u.ID == activity.CreatedByID
+}
+
+func (u *User) CanApproveParticipation(participation *Participation) bool {
+	if u.Role == UserRoleSuperAdmin {
+		return true
+	}
+	if u.Role == UserRoleFacultyAdmin || u.Role == UserRoleRegularAdmin {
+		// Admin สามารถ approve participation ได้
+		return true
+	}
+	return false
+}
+
+func (u *User) CanMarkAttendance() bool {
+	return u.Role == UserRoleSuperAdmin || u.Role == UserRoleFacultyAdmin || u.Role == UserRoleRegularAdmin
+}
+
+func (u *User) GetAccessibleFacultyIDs() []uint {
+	if u.Role == UserRoleSuperAdmin {
+		return []uint{} // Empty slice หมายถึงทุก faculty
+	}
+	if u.FacultyID != nil {
+		return []uint{*u.FacultyID}
+	}
+	return []uint{}
+}
+
+func (u *User) IsInSameFaculty(otherUser *User) bool {
+	if u.FacultyID == nil || otherUser.FacultyID == nil {
+		return false
+	}
+	return *u.FacultyID == *otherUser.FacultyID
+}
+
+func (u *User) HasHigherRoleThan(otherUser *User) bool {
+	roleHierarchy := map[UserRole]int{
+		UserRoleStudent:      1,
+		UserRoleRegularAdmin: 2,
+		UserRoleFacultyAdmin: 3,
+		UserRoleSuperAdmin:   4,
+	}
+	
+	currentLevel, exists1 := roleHierarchy[u.Role]
+	otherLevel, exists2 := roleHierarchy[otherUser.Role]
+	
+	if !exists1 || !exists2 {
+		return false
+	}
+	
+	return currentLevel > otherLevel
+}

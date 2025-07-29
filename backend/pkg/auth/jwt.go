@@ -8,9 +8,11 @@ import (
 )
 
 type JWTClaims struct {
-	UserID uint   `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
+	UserID       uint   `json:"user_id"`
+	Email        string `json:"email"`
+	Role         string `json:"role"`
+	FacultyID    *uint  `json:"faculty_id,omitempty"`
+	DepartmentID *uint  `json:"department_id,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -26,11 +28,13 @@ func NewJWTService(secretKey string, expireHours int) *JWTService {
 	}
 }
 
-func (j *JWTService) GenerateToken(userID uint, email, role string) (string, error) {
+func (j *JWTService) GenerateToken(userID uint, email, role string, facultyID, departmentID *uint) (string, error) {
 	claims := JWTClaims{
-		UserID: userID,
-		Email:  email,
-		Role:   role,
+		UserID:       userID,
+		Email:        email,
+		Role:         role,
+		FacultyID:    facultyID,
+		DepartmentID: departmentID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * time.Duration(j.expireHours)).Unix(),
 			IssuedAt:  time.Now().Unix(),
@@ -68,5 +72,5 @@ func (j *JWTService) RefreshToken(tokenString string) (string, error) {
 	}
 
 	// Generate new token with same claims but updated expiry
-	return j.GenerateToken(claims.UserID, claims.Email, claims.Role)
+	return j.GenerateToken(claims.UserID, claims.Email, claims.Role, claims.FacultyID, claims.DepartmentID)
 }

@@ -46,6 +46,7 @@ func main() {
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService)
+	gqlAuthMiddleware := middleware.NewGraphQLAuthMiddleware(jwtService, db.DB)
 
 	// Initialize GraphQL resolver
 	resolverConfig := &graph.Resolver{
@@ -55,6 +56,7 @@ func main() {
 
 	// Create GraphQL server
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolverConfig}))
+	srv.Use(gqlAuthMiddleware.ExtractAuth())
 
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{

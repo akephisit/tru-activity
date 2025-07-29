@@ -1,5 +1,9 @@
 # GraphQL schema definition file
 
+directive @auth on FIELD_DEFINITION
+directive @hasRole(roles: [UserRole!]!) on FIELD_DEFINITION
+directive @hasPermission(permission: String!) on FIELD_DEFINITION
+
 scalar Time
 
 type User {
@@ -194,55 +198,55 @@ input CreateDepartmentInput {
 
 type Query {
   # User queries
-  me: User
-  users(limit: Int, offset: Int): [User!]!
-  user(id: ID!): User
+  me: User @auth
+  users(limit: Int, offset: Int): [User!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  user(id: ID!): User @auth
   
   # Faculty queries
-  faculties: [Faculty!]!
-  faculty(id: ID!): Faculty
+  faculties: [Faculty!]! @auth
+  faculty(id: ID!): Faculty @auth
   
   # Department queries
-  departments(facultyID: ID): [Department!]!
-  department(id: ID!): Department
+  departments(facultyID: ID): [Department!]! @auth
+  department(id: ID!): Department @auth
   
   # Activity queries
-  activities(limit: Int, offset: Int, facultyID: ID, status: ActivityStatus): [Activity!]!
-  activity(id: ID!): Activity
-  myActivities: [Activity!]!
+  activities(limit: Int, offset: Int, facultyID: ID, status: ActivityStatus): [Activity!]! @auth
+  activity(id: ID!): Activity @auth
+  myActivities: [Activity!]! @auth
   
   # Participation queries
-  participations(activityID: ID, userID: ID): [Participation!]!
-  myParticipations: [Participation!]!
+  participations(activityID: ID, userID: ID): [Participation!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  myParticipations: [Participation!]! @auth
 }
 
 type Mutation {
   # Authentication
   login(input: LoginInput!): AuthPayload!
   register(input: RegisterInput!): AuthPayload!
-  refreshToken: AuthPayload!
+  refreshToken: AuthPayload! @auth
   
   # Activity management
-  createActivity(input: CreateActivityInput!): Activity!
-  updateActivity(id: ID!, input: UpdateActivityInput!): Activity!
-  deleteActivity(id: ID!): Boolean!
+  createActivity(input: CreateActivityInput!): Activity! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  updateActivity(id: ID!, input: UpdateActivityInput!): Activity! @auth
+  deleteActivity(id: ID!): Boolean! @auth
   
   # Participation management
-  joinActivity(activityID: ID!): Participation!
-  leaveActivity(activityID: ID!): Boolean!
-  approveParticipation(participationID: ID!): Participation!
-  rejectParticipation(participationID: ID!): Participation!
-  markAttendance(participationID: ID!, attended: Boolean!): Participation!
+  joinActivity(activityID: ID!): Participation! @auth
+  leaveActivity(activityID: ID!): Boolean! @auth
+  approveParticipation(participationID: ID!): Participation! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  rejectParticipation(participationID: ID!): Participation! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  markAttendance(participationID: ID!, attended: Boolean!): Participation! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
   
-  # Faculty management (Admin only)
-  createFaculty(input: CreateFacultyInput!): Faculty!
-  updateFaculty(id: ID!, input: CreateFacultyInput!): Faculty!
-  deleteFaculty(id: ID!): Boolean!
+  # Faculty management (Super Admin only)
+  createFaculty(input: CreateFacultyInput!): Faculty! @hasRole(roles: [SUPER_ADMIN])
+  updateFaculty(id: ID!, input: CreateFacultyInput!): Faculty! @hasRole(roles: [SUPER_ADMIN])
+  deleteFaculty(id: ID!): Boolean! @hasRole(roles: [SUPER_ADMIN])
   
-  # Department management (Admin only)
-  createDepartment(input: CreateDepartmentInput!): Department!
-  updateDepartment(id: ID!, input: CreateDepartmentInput!): Department!
-  deleteDepartment(id: ID!): Boolean!
+  # Department management (Super Admin and Faculty Admin)
+  createDepartment(input: CreateDepartmentInput!): Department! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  updateDepartment(id: ID!, input: CreateDepartmentInput!): Department! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  deleteDepartment(id: ID!): Boolean! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
 }
 
 type Subscription {

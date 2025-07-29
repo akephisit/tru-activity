@@ -40,6 +40,70 @@ Full-stack web application ที่พัฒนาด้วย Go Fiber + Graph
 └── docs/                  # Project documentation
 ```
 
+## Authentication และ Authorization System
+
+### Permission System Implementation
+
+ระบบ Authentication และ Authorization ที่รองรับ 3 ระดับ admin:
+
+**1. Super Admin** - จัดการระบบทั้งหมด:
+- CRUD คณะทั้งหมด
+- จัดการ subscription status (tracking เท่านั้น)
+- ดูรายงานรวมระบบ
+- เพิ่ม/ลบ Faculty Admins
+
+**2. Faculty Admin** - จัดการคณะตัวเอง:
+- จัดการนักศึกษาและกิจกรรมในคณะ
+- เพิ่ม/ลบ Regular Admins
+- ดูรายงานคณะ
+- จัดการ departments
+- รับแจ้งเตือน subscription expiry
+
+**3. Regular Admin** - ดำเนินการระดับกิจกรรม:
+- สแกน QR codes
+- ดูข้อมูลกิจกรรมที่ได้รับมอบหมาย
+
+### Key Implementation Files
+
+**Backend Permission System:**
+- `backend/pkg/permissions/permissions.go` - Permission system หลัก
+- `backend/internal/middleware/graphql_auth.go` - GraphQL auth middleware
+- `backend/pkg/auth/jwt.go` - JWT service (ขยายด้วย faculty_id, department_id)
+- `backend/internal/models/user.go` - User model พร้อม permission methods
+
+**GraphQL Integration:**
+- `backend/graph/schema.graphqls` - Schema พร้อม auth directives (@auth, @hasRole)
+- `backend/graph/schema.resolvers.go` - Resolvers พร้อม authorization
+- `backend/graph/model/models_gen.go` - Generated GraphQL models
+- `backend/graph/generated/generated.go` - Generated GraphQL interfaces
+
+### Permission Features
+
+**Role-based Access:**
+- Field-level authorization ใน GraphQL
+- Faculty-scoped data access
+- Flexible permission checking
+- Role hierarchy validation
+
+**Security Features:**
+- JWT tokens พร้อม faculty และ department info
+- Context-based authorization
+- Input validation และ sanitization
+- Proper error handling
+
+### Usage Examples
+
+```go
+// ตรวจสอบ permission
+authCtx, err := middleware.RequirePermission(ctx, permissions.PermCreateActivity)
+
+// ตรวจสอบ role
+authCtx, err := middleware.RequireRole(ctx, models.UserRoleFacultyAdmin)
+
+// ตรวจสอบ faculty permission
+authCtx, err := middleware.RequireFacultyPermission(ctx, permissions.PermCreateActivity, facultyID)
+```
+
 ## Development References
 
 ### Context and Library Guidelines
