@@ -96,7 +96,6 @@ steps:
     env:
       - 'PUBLIC_API_URL=https://tru-activity-backend-$_HASH-$_REGION.a.run.app'
       - 'PUBLIC_GRAPHQL_URL=https://tru-activity-backend-$_HASH-$_REGION.a.run.app/query'
-      - 'PUBLIC_WS_URL=wss://tru-activity-backend-$_HASH-$_REGION.a.run.app/query'
       - 'PUBLIC_ENV=production'
     id: 'build-frontend'
 

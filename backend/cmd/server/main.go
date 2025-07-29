@@ -13,6 +13,7 @@ import (
 	"github.com/kruakemaths/tru-activity/backend/graph/generated"
 	"github.com/kruakemaths/tru-activity/backend/internal/config"
 	"github.com/kruakemaths/tru-activity/backend/internal/database"
+	"github.com/kruakemaths/tru-activity/backend/internal/handlers"
 	"github.com/kruakemaths/tru-activity/backend/internal/middleware"
 	"github.com/kruakemaths/tru-activity/backend/internal/models"
 	"github.com/kruakemaths/tru-activity/backend/pkg/auth"
@@ -47,6 +48,9 @@ func main() {
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService)
 	gqlAuthMiddleware := middleware.NewGraphQLAuthMiddleware(jwtService, db.DB)
+
+	// Initialize SSE handler
+	sseHandler := handlers.NewSSEHandler(db, jwtService)
 
 	// Initialize GraphQL resolver
 	resolverConfig := &graph.Resolver{
@@ -119,6 +123,12 @@ func main() {
 		srv.ServeHTTP(c.Response(), c.Request())
 		return nil
 	})
+
+	// SSE endpoints
+	app.Get("/events", sseHandler.HandleSSEConnection)
+	app.Post("/events/subscribe", sseHandler.HandleSubscribe)
+	app.Post("/events/unsubscribe", sseHandler.HandleUnsubscribe)
+	app.Post("/events/heartbeat", sseHandler.HandleHeartbeat)
 
 	// Protected routes group
 	protected := app.Group("/api")

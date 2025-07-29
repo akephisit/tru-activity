@@ -2,11 +2,11 @@
   import { onMount, onDestroy } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { 
-    getSubscriptionClient, 
-    formatSubscriptionPayload, 
+    getSSEClient, 
+    formatSSEEvent, 
     getNotificationIcon,
-    type SubscriptionPayload 
-  } from '$lib/services/subscription-client';
+    type SSEEvent 
+  } from '$lib/services/sse-client';
   import { Button } from '$lib/components/ui/button';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
@@ -28,10 +28,10 @@
   export let showConnectionStatus = true;
   export let enableSound = false;
 
-  const client = getSubscriptionClient();
+  const client = getSSEClient();
   
   let isOpen = false;
-  let notifications: (SubscriptionPayload & { id: string; autoHide?: boolean })[] = [];
+  let notifications: (SSEEvent & { id: string; autoHide?: boolean })[] = [];
   let unsubscribeFunctions: (() => void)[] = [];
   let connectionStatus = { connected: false, connecting: false, error: null };
   let notificationCount = 0;
@@ -53,29 +53,36 @@
 
     // Subscribe to personal notifications
     const unsubscribePersonal = client.personalNotifications.subscribe(personalNotifications => {
-      personalNotifications.forEach(payload => {
-        addNotification(payload);
+      personalNotifications.forEach(event => {
+        addNotification(event);
       });
     });
 
     // Subscribe to system alerts
     const unsubscribeAlerts = client.systemAlerts.subscribe(alerts => {
-      alerts.forEach(payload => {
-        addNotification(payload, false); // System alerts don't auto-hide
+      alerts.forEach(event => {
+        addNotification(event, false); // System alerts don't auto-hide
       });
     });
 
     // Subscribe to QR scan events (for admins)
     const unsubscribeQR = client.qrScanEvents.subscribe(events => {
-      events.forEach(payload => {
-        addNotification(payload);
+      events.forEach(event => {
+        addNotification(event);
       });
     });
 
     // Subscribe to participation events
     const unsubscribeParticipation = client.participationEvents.subscribe(events => {
-      events.forEach(payload => {
-        addNotification(payload);
+      events.forEach(event => {
+        addNotification(event);
+      });
+    });
+
+    // Subscribe to faculty updates
+    const unsubscribeFaculty = client.facultyUpdates.subscribe(updates => {
+      updates.forEach(event => {
+        addNotification(event);
       });
     });
 
@@ -84,7 +91,8 @@
       unsubscribePersonal,
       unsubscribeAlerts,
       unsubscribeQR,
-      unsubscribeParticipation
+      unsubscribeParticipation,
+      unsubscribeFaculty
     ];
   });
 
@@ -92,9 +100,9 @@
     unsubscribeFunctions.forEach(fn => fn());
   });
 
-  function addNotification(payload: SubscriptionPayload, autoHide = true) {
+  function addNotification(event: SSEEvent, autoHide = true) {
     const notification = {
-      ...payload,
+      ...event,
       id: `${Date.now()}-${Math.random()}`,
       autoHide
     };
@@ -308,7 +316,7 @@
                             <div class="text-gray-600 mt-1">{notification.data.description}</div>
                           {/if}
                         {:else}
-                          {formatSubscriptionPayload(notification)}
+                          {formatSSEEvent(notification)}
                         {/if}
                       </div>
 
