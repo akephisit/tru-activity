@@ -45,6 +45,7 @@ Full-stack web application ที่พัฒนาด้วย Go Fiber + Graph
 ### Context and Library Guidelines
 
 - ถ้าจะเพิ่ม library ใหม่ หรือ ตรวจสอบ document ให้ดูจาก context7
+- ก่อนที่จะเริ่มเขียนโค้ด ให้ทำการตรวจสอบ document วิธีการเขียนทุกครั้งโดยใช้ context7
 
 ### Development Workflow
 
