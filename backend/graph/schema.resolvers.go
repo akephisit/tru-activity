@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/kruakemaths/tru-activity/backend/graph/generated"
 	"github.com/kruakemaths/tru-activity/backend/graph/model"
@@ -391,6 +392,77 @@ func (r *mutationResolver) JoinActivity(ctx context.Context, activityID string) 
 	return convertParticipationToGraphQL(&participation), nil
 }
 
+// Subscription Management Resolvers
+
+func (r *mutationResolver) CreateSubscription(ctx context.Context, input model.CreateSubscriptionInput) (*model.Subscription, error) {
+	authCtx, err := middleware.RequireRole(ctx, models.UserRoleSuperAdmin)
+	if err != nil {
+		return nil, err
+	}
+
+	facultyID, err := strconv.ParseUint(*input.FacultyID, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid faculty ID")
+	}
+
+	subscription := models.Subscription{
+		FacultyID: uint(facultyID),
+		Type:      models.SubscriptionType(input.Type),
+		Status:    models.SubscriptionStatusActive,
+		StartDate: input.StartDate,
+		EndDate:   input.EndDate,
+	}
+
+	if err := r.DB.Create(&subscription).Error; err != nil {
+		return nil, fmt.Errorf("failed to create subscription: %v", err)
+	}
+
+	r.DB.Preload("Faculty").First(&subscription, subscription.ID)
+	return convertSubscriptionToGraphQL(&subscription), nil
+}
+
+func (r *queryResolver) Subscriptions(ctx context.Context) ([]*model.Subscription, error) {
+	authCtx, err := middleware.RequireRole(ctx, models.UserRoleSuperAdmin)
+	if err != nil {
+		return nil, err
+	}
+
+	var subscriptions []models.Subscription
+	if err := r.DB.Preload("Faculty").Find(&subscriptions).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch subscriptions: %v", err)
+	}
+
+	result := make([]*model.Subscription, len(subscriptions))
+	for i, sub := range subscriptions {
+		result[i] = convertSubscriptionToGraphQL(&sub)
+	}
+	return result, nil
+}
+
+func (r *queryResolver) FacultySubscription(ctx context.Context, facultyID string) (*model.Subscription, error) {
+	authCtx, err := middleware.RequireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	fID, err := strconv.ParseUint(facultyID, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid faculty ID")
+	}
+
+	// Check if user has permission to view this faculty's subscription
+	if authCtx.Role != models.UserRoleSuperAdmin && authCtx.FacultyID != nil && *authCtx.FacultyID != uint(fID) {
+		return nil, fmt.Errorf("access denied")
+	}
+
+	var subscription models.Subscription
+	if err := r.DB.Preload("Faculty").Where("faculty_id = ?", fID).First(&subscription).Error; err != nil {
+		return nil, fmt.Errorf("subscription not found")
+	}
+
+	return convertSubscriptionToGraphQL(&subscription), nil
+}
+
 // Helper conversion functions
 
 func convertUserToGraphQL(user *models.User) *model.User {
@@ -449,6 +521,51 @@ func convertParticipationToGraphQL(participation *models.Participation) *model.P
 		Notes:        participation.Notes,
 		CreatedAt:    participation.CreatedAt,
 		UpdatedAt:    participation.UpdatedAt,
+	}
+}
+
+func convertSubscriptionToGraphQL(subscription *models.Subscription) *model.Subscription {
+	return &model.Subscription{
+		ID:               fmt.Sprintf("%d", subscription.ID),
+		Type:             model.SubscriptionType(subscription.Type),
+		Status:           model.SubscriptionStatus(subscription.Status),
+		StartDate:        subscription.StartDate,
+		EndDate:          subscription.EndDate,
+		DaysUntilExpiry:  subscription.DaysUntilExpiry(),
+		NeedsNotification: subscription.NeedsNotification(),
+		CreatedAt:        subscription.CreatedAt,
+		UpdatedAt:        subscription.UpdatedAt,
+	}
+}
+
+func convertSystemMetricsToGraphQL(metrics *models.SystemMetrics) *model.SystemMetrics {
+	return &model.SystemMetrics{
+		ID:                   fmt.Sprintf("%d", metrics.ID),
+		TotalFaculties:       metrics.TotalFaculties,
+		TotalDepartments:     metrics.TotalDepartments,
+		TotalStudents:        metrics.TotalStudents,
+		TotalActivities:      metrics.TotalActivities,
+		TotalParticipations:  metrics.TotalParticipations,
+		ActiveSubscriptions:  metrics.ActiveSubscriptions,
+		ExpiredSubscriptions: metrics.ExpiredSubscriptions,
+		Date:                 metrics.Date,
+		CreatedAt:            metrics.CreatedAt,
+		UpdatedAt:            metrics.UpdatedAt,
+	}
+}
+
+func convertFacultyMetricsToGraphQL(metrics *models.FacultyMetrics) *model.FacultyMetrics {
+	return &model.FacultyMetrics{
+		ID:                  fmt.Sprintf("%d", metrics.ID),
+		TotalStudents:       metrics.TotalStudents,
+		ActiveStudents:      metrics.ActiveStudents,
+		TotalActivities:     metrics.TotalActivities,
+		CompletedActivities: metrics.CompletedActivities,
+		TotalParticipants:   metrics.TotalParticipants,
+		AverageAttendance:   metrics.AverageAttendance,
+		Date:                metrics.Date,
+		CreatedAt:           metrics.CreatedAt,
+		UpdatedAt:           metrics.UpdatedAt,
 	}
 }
 

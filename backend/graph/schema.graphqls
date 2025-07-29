@@ -114,11 +114,13 @@ enum ParticipationStatus {
 
 type Subscription {
   id: ID!
-  user: User!
+  faculty: Faculty!
   type: SubscriptionType!
   status: SubscriptionStatus!
   startDate: Time!
   endDate: Time!
+  daysUntilExpiry: Int!
+  needsNotification: Boolean!
   createdAt: Time!
   updatedAt: Time!
 }
@@ -126,7 +128,7 @@ type Subscription {
 enum SubscriptionType {
   BASIC
   PREMIUM
-  VIP
+  ENTERPRISE
 }
 
 enum SubscriptionStatus {
@@ -196,6 +198,67 @@ input CreateDepartmentInput {
   facultyID: ID!
 }
 
+input UpdateDepartmentInput {
+  name: String
+  code: String
+}
+
+input CreateSubscriptionInput {
+  facultyID: ID!
+  type: SubscriptionType!
+  startDate: Time!
+  endDate: Time!
+}
+
+input UpdateSubscriptionInput {
+  type: SubscriptionType
+  startDate: Time
+  endDate: Time
+  status: SubscriptionStatus
+}
+
+type FacultyMetrics {
+  id: ID!
+  faculty: Faculty!
+  totalStudents: Int!
+  activeStudents: Int!
+  totalActivities: Int!
+  completedActivities: Int!
+  totalParticipants: Int!
+  averageAttendance: Float!
+  date: Time!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+type SystemMetrics {
+  id: ID!
+  totalFaculties: Int!
+  totalDepartments: Int!
+  totalStudents: Int!
+  totalActivities: Int!
+  totalParticipations: Int!
+  activeSubscriptions: Int!
+  expiredSubscriptions: Int!
+  date: Time!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+type NotificationLog {
+  id: ID!
+  subscription: Subscription!
+  type: String!
+  status: String!
+  email: String!
+  subject: String!
+  message: String!
+  sentAt: Time
+  errorMessage: String
+  createdAt: Time!
+  updatedAt: Time!
+}
+
 type Query {
   # User queries
   me: User @auth
@@ -218,6 +281,18 @@ type Query {
   # Participation queries
   participations(activityID: ID, userID: ID): [Participation!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
   myParticipations: [Participation!]! @auth
+  
+  # Subscription queries
+  subscriptions: [Subscription!]! @hasRole(roles: [SUPER_ADMIN])
+  subscription(id: ID!): Subscription @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  facultySubscription(facultyID: ID!): Subscription @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Analytics queries
+  systemMetrics(fromDate: Time, toDate: Time): [SystemMetrics!]! @hasRole(roles: [SUPER_ADMIN])
+  facultyMetrics(facultyID: ID, fromDate: Time, toDate: Time): [FacultyMetrics!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Notification queries
+  notificationLogs(subscriptionID: ID, limit: Int, offset: Int): [NotificationLog!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
 }
 
 type Mutation {
@@ -245,12 +320,25 @@ type Mutation {
   
   # Department management (Super Admin and Faculty Admin)
   createDepartment(input: CreateDepartmentInput!): Department! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
-  updateDepartment(id: ID!, input: CreateDepartmentInput!): Department! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  updateDepartment(id: ID!, input: UpdateDepartmentInput!): Department! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
   deleteDepartment(id: ID!): Boolean! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Subscription management (Super Admin only)
+  createSubscription(input: CreateSubscriptionInput!): Subscription! @hasRole(roles: [SUPER_ADMIN])
+  updateSubscription(id: ID!, input: UpdateSubscriptionInput!): Subscription! @hasRole(roles: [SUPER_ADMIN])
+  deleteSubscription(id: ID!): Boolean! @hasRole(roles: [SUPER_ADMIN])
+  
+  # User role management
+  assignFacultyAdmin(userID: ID!, facultyID: ID!): User! @hasRole(roles: [SUPER_ADMIN])
+  assignRegularAdmin(userID: ID!, facultyID: ID!, departmentID: ID): User! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  removeAdminRole(userID: ID!): User! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
 }
 
 type Subscription {
   # Real-time updates for activities
   activityUpdated(activityID: ID): Activity!
   participationUpdated(activityID: ID): Participation!
+  
+  # Subscription expiry notifications
+  subscriptionExpiryAlert(facultyID: ID): Subscription!
 }

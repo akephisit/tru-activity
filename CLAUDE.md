@@ -111,6 +111,91 @@ authCtx, err := middleware.RequireFacultyPermission(ctx, permissions.PermCreateA
 - ถ้าจะเพิ่ม library ใหม่ หรือ ตรวจสอบ document ให้ดูจาก context7
 - ก่อนที่จะเริ่มเขียนโค้ด ให้ทำการตรวจสอบ document วิธีการเขียนทุกครั้งโดยใช้ context7
 
+## Faculty Management และ Subscription System
+
+ระบบจัดการคณะและการแจ้งเตือน subscription ที่ครอบคลุม:
+
+### Faculty Management Features
+
+**Backend Implementation:**
+- `backend/internal/models/faculty.go` - Faculty และ Department models
+- `backend/internal/models/subscription.go` - Enhanced subscription model พร้อม notification tracking
+- `backend/internal/models/analytics.go` - Analytics และ metrics models
+- `backend/graph/schema.graphqls` - Extended GraphQL schema
+- `backend/graph/schema.resolvers.go` - Complete CRUD resolvers
+
+**Key Features:**
+- CRUD operations สำหรับ faculties และ departments
+- Faculty admin assignment และ role management
+- Department management with faculty association
+- Real-time data tracking และ analytics
+
+### Subscription Notification System
+
+**Notification Service:**
+- `backend/pkg/notifications/notification_service.go` - Complete notification service
+- Email notifications สำหรับ subscription expiry (7 วัน, 1 วัน)
+- Automatic notification scheduling
+- Notification logging และ status tracking
+
+**Subscription Plans:**
+- Basic, Premium, Enterprise plans (display only)
+- Faculty-based subscriptions (แทน user-based)
+- Expiry tracking พร้อม automatic notifications
+- Non-blocking system - ไม่ limit การใช้งาน
+
+### Analytics และ Metrics
+
+**System Metrics:**
+- Total faculties, departments, students
+- Activity และ participation statistics
+- Subscription status overview
+- Daily metrics collection
+
+**Faculty Metrics:**
+- Student และ activity counts per faculty
+- Attendance averages
+- Performance tracking
+- Historical data storage
+
+### Frontend Components
+
+**Super Admin Dashboard:**
+- `frontend/src/routes/dashboard/admin/+page.svelte` - System overview
+- Real-time metrics display
+- Subscription expiry alerts
+- Faculty performance overview
+
+**Faculty Management:**
+- `frontend/src/routes/dashboard/faculties/+page.svelte` - Faculty CRUD
+- Department management
+- Admin assignment interface
+- Performance metrics display
+
+**Subscription Management:**
+- `frontend/src/routes/dashboard/subscriptions/+page.svelte` - Subscription overview
+- Expiry notifications
+- Plan management (tracking only)
+- Status monitoring
+
+### Database Schema
+
+**New Tables:**
+- `faculty_metrics` - Faculty performance data
+- `system_metrics` - System-wide analytics
+- `notification_logs` - Notification history
+- Enhanced `subscriptions` table พร้อม notification fields
+
+**Migration:**
+- `backend/migrations/002_update_subscriptions_and_analytics.sql`
+
+### Permission Integration
+
+ระบบใช้ existing permission system:
+- Super Admin: Full access ทุก features
+- Faculty Admin: Faculty-scoped access
+- Regular Admin: Limited operation access
+
 ### Development Workflow
 
 - เมื่อทำการเขียนโค้ด หรือพัฒนาเสร็จให้ทำการ อัปเดตใน CLAUDE.md ทุกครั้ง
