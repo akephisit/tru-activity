@@ -196,6 +196,153 @@ authCtx, err := middleware.RequireFacultyPermission(ctx, permissions.PermCreateA
 - Faculty Admin: Faculty-scoped access
 - Regular Admin: Limited operation access
 
+## QR Code System และ Activity Management
+
+ระบบ QR Code แบบ client-side generation และการจัดการกิจกรรมขั้นสูง:
+
+### QR Code Features (Client-side Generation)
+
+**QR Code System:**
+- `backend/pkg/utils/qr.go` - Enhanced QR utilities พร้อม signature verification
+- `backend/pkg/services/qr_service.go` - Complete QR validation และ scanning service
+- Client-side QR generation (ไม่เก็บ QR images ใน server)
+- เก็บแค่ unique identifier + secret ใน database
+- QR data format: `{"student_id": "xxx", "timestamp": "xxx", "signature": "xxx", "version": 1}`
+
+**Security Features:**
+- HMAC-SHA256 signature validation
+- Timestamp-based expiry (15 minutes)
+- QR secret regeneration capability
+- Server-side validation เมื่อสแกน QR
+- Comprehensive scan logging
+
+### Activity Management System
+
+**Enhanced Activity Models:**
+- `backend/internal/models/activity.go` - Extended activity models
+- Activity templates สำหรับ reusable activities
+- Recurring events พร้อม recurrence rules
+- Activity assignments สำหรับ Regular Admins
+- Faculty-scoped และ cross-faculty activities
+
+**Activity Features:**
+- Faculty-scoped activity creation
+- Cross-faculty activities (Super Admin only)
+- Activity templates และ recurring events
+- Permission-based activity access
+- Real-time participation tracking
+
+### Activity Assignment System
+
+**Assignment Management:**
+- Faculty Admin assigns activities to Regular Admins
+- Granular permissions (can_scan_qr, can_approve)
+- Activity-specific access control
+- Assignment tracking และ management
+- Performance monitoring
+
+### QR Scanning Flow
+
+**Scanning Process:**
+1. Admin scans QR code (มี timestamp และ signature)
+2. Server validate signature และ check student exists
+3. Record participation พร้อม attendance
+4. Send real-time notification
+5. Log scan attempt พร้อม metadata
+
+**QR Scanner Interface:**
+- `frontend/src/routes/dashboard/scanner/+page.svelte` - Mobile-friendly scanner
+- Camera integration สำหรับ QR scanning
+- Manual input fallback
+- Real-time scan results
+- Activity selection และ validation
+
+### Student QR Code Interface
+
+**My QR Code:**
+- `frontend/src/routes/dashboard/my-qr/+page.svelte` - Student QR interface
+- Auto-refreshing QR codes (15-minute expiry)
+- QR secret regeneration
+- Download และ copy functionality
+- Security warnings และ instructions
+
+### Real-time Notifications
+
+**Notification System:**
+- `backend/pkg/services/realtime_service.go` - WebSocket-based notifications
+- Real-time QR scan notifications
+- Participation updates
+- Activity status changes
+- Subscription-based filtering
+
+**Notification Types:**
+- QR scan results
+- Participation approvals
+- Activity assignments
+- System announcements
+- Health checks
+
+### Activity Service
+
+**Activity Management:**
+- `backend/pkg/services/activity_service.go` - Advanced activity operations
+- Template-based activity creation
+- Recurring event generation
+- Assignment management
+- Faculty-scoped operations
+
+**Recurring Events:**
+- RRULE-based recurrence patterns
+- Support for DAILY, WEEKLY, MONTHLY frequencies
+- Weekday-specific recurrence
+- Count และ until-date limits
+- Parent-child activity relationships
+
+### Database Enhancements
+
+**New Tables:**
+- `activity_templates` - Reusable activity templates
+- `activity_assignments` - Admin assignments
+- `qr_scan_logs` - Comprehensive scan logging
+- Enhanced `activities` table พร้อม template support
+- Enhanced `participations` table พร้อม QR scan data
+
+**Migration:**
+- `backend/migrations/003_qr_system_and_activity_enhancements.sql`
+
+### GraphQL API Extensions
+
+**New Operations:**
+- QR data generation และ validation
+- Activity template management
+- Assignment operations
+- Real-time subscriptions
+- Scan logging queries
+
+**Permission Integration:**
+- Role-based QR scanning permissions
+- Faculty-scoped activity access
+- Assignment-based permissions
+- Real-time notification filtering
+
+### Mobile Optimization
+
+**Mobile Features:**
+- Touch-friendly QR scanner interface
+- Camera integration พร้อม fallbacks
+- Offline QR code storage
+- Responsive design สำหรับ mobile devices
+- Progressive Web App capabilities
+
+### Security Implementation
+
+**QR Security:**
+- Client-side generation ลด server load
+- Cryptographic signatures ป้องกัน tampering
+- Time-based expiry ลด replay attacks
+- Comprehensive audit logging
+- Secret rotation capability
+
 ### Development Workflow
 
 - เมื่อทำการเขียนโค้ด หรือพัฒนาเสร็จให้ทำการ อัปเดตใน CLAUDE.md ทุกครั้ง

@@ -71,9 +71,17 @@ type Activity {
   faculty: Faculty
   department: Department
   createdBy: User!
+  template: ActivityTemplate
+  isRecurring: Boolean!
+  recurrenceRule: String
+  parentActivity: Activity
+  qrCodeRequired: Boolean!
+  autoApprove: Boolean!
   createdAt: Time!
   updatedAt: Time!
   participations: [Participation!]!
+  assignments: [ActivityAssignment!]!
+  childActivities: [Activity!]!
 }
 
 enum ActivityType {
@@ -99,6 +107,9 @@ type Participation {
   registeredAt: Time!
   approvedAt: Time
   attendedAt: Time
+  qrScannedAt: Time
+  scannedBy: User
+  scanLocation: String
   notes: String
   createdAt: Time!
   updatedAt: Time!
@@ -169,6 +180,11 @@ input CreateActivityInput {
   points: Int!
   facultyID: ID
   departmentID: ID
+  templateID: ID
+  isRecurring: Boolean
+  recurrenceRule: String
+  qrCodeRequired: Boolean
+  autoApprove: Boolean
 }
 
 input UpdateActivityInput {
@@ -184,6 +200,119 @@ input UpdateActivityInput {
   points: Int
   facultyID: ID
   departmentID: ID
+  qrCodeRequired: Boolean
+  autoApprove: Boolean
+}
+
+type ActivityTemplate {
+  id: ID!
+  name: String!
+  description: String
+  type: ActivityType!
+  defaultDuration: Int!
+  location: String
+  maxParticipants: Int
+  requireApproval: Boolean!
+  points: Int!
+  qrCodeRequired: Boolean!
+  autoApprove: Boolean!
+  faculty: Faculty
+  createdBy: User!
+  isActive: Boolean!
+  createdAt: Time!
+  updatedAt: Time!
+  activities: [Activity!]!
+}
+
+input CreateActivityTemplateInput {
+  name: String!
+  description: String
+  type: ActivityType!
+  defaultDuration: Int!
+  location: String
+  maxParticipants: Int
+  requireApproval: Boolean!
+  points: Int!
+  qrCodeRequired: Boolean
+  autoApprove: Boolean
+  facultyID: ID
+}
+
+input UpdateActivityTemplateInput {
+  name: String
+  description: String
+  type: ActivityType
+  defaultDuration: Int
+  location: String
+  maxParticipants: Int
+  requireApproval: Boolean
+  points: Int
+  qrCodeRequired: Boolean
+  autoApprove: Boolean
+  isActive: Boolean
+}
+
+type ActivityAssignment {
+  id: ID!
+  activity: Activity!
+  admin: User!
+  assignedBy: User!
+  canScanQR: Boolean!
+  canApprove: Boolean!
+  notes: String
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+input CreateActivityAssignmentInput {
+  activityID: ID!
+  adminID: ID!
+  canScanQR: Boolean
+  canApprove: Boolean
+  notes: String
+}
+
+input UpdateActivityAssignmentInput {
+  canScanQR: Boolean
+  canApprove: Boolean
+  notes: String
+}
+
+type QRScanLog {
+  id: ID!
+  studentID: String!
+  user: User
+  activity: Activity!
+  scannedBy: User!
+  scanTimestamp: Time!
+  qrTimestamp: Time!
+  valid: Boolean!
+  errorMessage: String
+  scanLocation: String
+  ipAddress: String
+  createdAt: Time!
+}
+
+type QRData {
+  studentID: String!
+  timestamp: String!
+  signature: String!
+  version: Int!
+  qrString: String!
+}
+
+type QRScanResult {
+  success: Boolean!
+  message: String!
+  participation: Participation
+  user: User
+  scanLog: QRScanLog
+}
+
+input QRScanInput {
+  qrData: String!
+  activityID: ID!
+  scanLocation: String
 }
 
 input CreateFacultyInput {
@@ -293,6 +422,18 @@ type Query {
   
   # Notification queries
   notificationLogs(subscriptionID: ID, limit: Int, offset: Int): [NotificationLog!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Activity Template queries
+  activityTemplates(facultyID: ID): [ActivityTemplate!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  activityTemplate(id: ID!): ActivityTemplate @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Activity Assignment queries
+  activityAssignments(activityID: ID, adminID: ID): [ActivityAssignment!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  myActivityAssignments: [ActivityAssignment!]! @hasRole(roles: [REGULAR_ADMIN])
+  
+  # QR Code queries
+  myQRData: QRData! @auth
+  qrScanLogs(activityID: ID, userID: ID, limit: Int): [QRScanLog!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
 }
 
 type Mutation {
@@ -332,6 +473,21 @@ type Mutation {
   assignFacultyAdmin(userID: ID!, facultyID: ID!): User! @hasRole(roles: [SUPER_ADMIN])
   assignRegularAdmin(userID: ID!, facultyID: ID!, departmentID: ID): User! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
   removeAdminRole(userID: ID!): User! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Activity Template management
+  createActivityTemplate(input: CreateActivityTemplateInput!): ActivityTemplate! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  updateActivityTemplate(id: ID!, input: UpdateActivityTemplateInput!): ActivityTemplate! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  deleteActivityTemplate(id: ID!): Boolean! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Activity Assignment management
+  assignActivity(input: CreateActivityAssignmentInput!): ActivityAssignment! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  updateActivityAssignment(id: ID!, input: UpdateActivityAssignmentInput!): ActivityAssignment! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  removeActivityAssignment(id: ID!): Boolean! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # QR Code management
+  scanQRCode(input: QRScanInput!): QRScanResult! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  refreshMyQRSecret: QRData! @auth
+  refreshUserQRSecret(userID: ID!): QRData! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
 }
 
 type Subscription {
@@ -341,4 +497,8 @@ type Subscription {
   
   # Subscription expiry notifications
   subscriptionExpiryAlert(facultyID: ID): Subscription!
+  
+  # Real-time QR scan notifications
+  qrScanned(activityID: ID): QRScanResult!
+  participationScanned(activityID: ID): Participation!
 }
