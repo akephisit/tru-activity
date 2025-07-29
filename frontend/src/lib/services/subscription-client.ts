@@ -1,6 +1,7 @@
 import { createClient, Client } from 'graphql-ws';
 import { writable, type Writable } from 'svelte/stores';
 import { browser } from '$app/environment';
+import { env } from '$env/dynamic/public';
 
 export interface SubscriptionPayload {
   type: string;
@@ -538,7 +539,7 @@ let subscriptionClient: SubscriptionClient | null = null;
 
 export function getSubscriptionClient(): SubscriptionClient {
   if (!subscriptionClient && browser) {
-    const wsUrl = import.meta.env.VITE_GRAPHQL_WS_URL || 'ws://localhost:8080/graphql';
+    const wsUrl = env.PUBLIC_WS_URL || 'ws://localhost:8080/query';
     subscriptionClient = new SubscriptionClient(wsUrl);
   }
   return subscriptionClient!;

@@ -2,10 +2,19 @@ import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/clien
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { browser } from '$app/environment';
+import { env } from '$env/dynamic/public';
+
+// Get GraphQL URL from environment variables with fallback
+const getGraphQLURL = () => {
+  if (browser) {
+    return env.PUBLIC_GRAPHQL_URL || 'http://localhost:8080/query';
+  }
+  return 'http://backend:8080/query'; // Server-side fallback
+};
 
 // HTTP Link
 const httpLink = createHttpLink({
-  uri: browser ? 'http://localhost:8080/query' : 'http://backend:8080/query',
+  uri: getGraphQLURL(),
 });
 
 // Auth Link

@@ -193,9 +193,10 @@ deploy_frontend() {
     npm ci
     
     # Set environment variables for build
-    export VITE_API_URL="https://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
-    export VITE_WS_URL="wss://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
-    export VITE_ENV="production"
+    export PUBLIC_API_URL="https://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
+    export PUBLIC_GRAPHQL_URL="https://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app/query"
+    export PUBLIC_WS_URL="wss://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app/query"
+    export PUBLIC_ENV="production"
     
     npm run build
     

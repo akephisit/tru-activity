@@ -79,9 +79,29 @@ func main() {
 
 	// Health check endpoint
 	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.SendString("OK")
+	})
+
+	// Readiness check endpoint (checks database connectivity)
+	app.Get("/ready", func(c *fiber.Ctx) error {
+		sqlDB, err := db.DB.DB()
+		if err != nil {
+			return c.Status(503).JSON(fiber.Map{
+				"status": "not ready",
+				"error": "database connection failed",
+			})
+		}
+		
+		if err := sqlDB.Ping(); err != nil {
+			return c.Status(503).JSON(fiber.Map{
+				"status": "not ready",
+				"error": "database ping failed",
+			})
+		}
+		
 		return c.JSON(fiber.Map{
-			"status": "ok",
-			"message": "TRU Activity API is running",
+			"status": "ready",
+			"message": "TRU Activity API is ready",
 		})
 	})
 

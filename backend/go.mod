@@ -4,8 +4,8 @@ go 1.22
 
 require (
 	github.com/99designs/gqlgen v0.17.49
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/go-redis/redis/v8 v8.11.5
+	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/redis/go-redis/v9 v9.3.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gofiber/jwt/v3 v3.3.10
 	github.com/joho/godotenv v1.5.1

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type JWTClaims struct {
@@ -13,7 +13,7 @@ type JWTClaims struct {
 	Role         string `json:"role"`
 	FacultyID    *uint  `json:"faculty_id,omitempty"`
 	DepartmentID *uint  `json:"department_id,omitempty"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 type JWTService struct {
@@ -35,9 +35,9 @@ func (j *JWTService) GenerateToken(userID uint, email, role string, facultyID, d
 		Role:         role,
 		FacultyID:    facultyID,
 		DepartmentID: departmentID,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * time.Duration(j.expireHours)).Unix(),
-			IssuedAt:  time.Now().Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(j.expireHours))),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "tru-activity",
 		},
 	}

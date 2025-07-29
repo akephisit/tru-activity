@@ -21,7 +21,7 @@ type User {
   createdAt: Time!
   updatedAt: Time!
   participations: [Participation!]!
-  subscriptions: [Subscription!]!
+  subscriptions: [FacultySubscription!]!
 }
 
 enum UserRole {
@@ -123,7 +123,7 @@ enum ParticipationStatus {
   ABSENT
 }
 
-type Subscription {
+type FacultySubscription {
   id: ID!
   faculty: Faculty!
   type: SubscriptionType!
@@ -376,7 +376,7 @@ type SystemMetrics {
 
 type NotificationLog {
   id: ID!
-  subscription: Subscription!
+  subscription: FacultySubscription!
   type: String!
   status: String!
   email: String!
@@ -412,9 +412,9 @@ type Query {
   myParticipations: [Participation!]! @auth
   
   # Subscription queries
-  subscriptions: [Subscription!]! @hasRole(roles: [SUPER_ADMIN])
-  subscription(id: ID!): Subscription @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
-  facultySubscription(facultyID: ID!): Subscription @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  subscriptions: [FacultySubscription!]! @hasRole(roles: [SUPER_ADMIN])
+  subscription(id: ID!): FacultySubscription @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  facultySubscription(facultyID: ID!): FacultySubscription @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
   
   # Analytics queries
   systemMetrics(fromDate: Time, toDate: Time): [SystemMetrics!]! @hasRole(roles: [SUPER_ADMIN])
@@ -465,8 +465,8 @@ type Mutation {
   deleteDepartment(id: ID!): Boolean! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
   
   # Subscription management (Super Admin only)
-  createSubscription(input: CreateSubscriptionInput!): Subscription! @hasRole(roles: [SUPER_ADMIN])
-  updateSubscription(id: ID!, input: UpdateSubscriptionInput!): Subscription! @hasRole(roles: [SUPER_ADMIN])
+  createSubscription(input: CreateSubscriptionInput!): FacultySubscription! @hasRole(roles: [SUPER_ADMIN])
+  updateSubscription(id: ID!, input: UpdateSubscriptionInput!): FacultySubscription! @hasRole(roles: [SUPER_ADMIN])
   deleteSubscription(id: ID!): Boolean! @hasRole(roles: [SUPER_ADMIN])
   
   # User role management
