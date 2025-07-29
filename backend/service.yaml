@@ -1,0 +1,105 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: tru-activity-backend
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+    run.googleapis.com/cpu-throttling: "false"
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "100"
+        autoscaling.knative.dev/minScale: "1"
+        run.googleapis.com/memory: "2Gi"
+        run.googleapis.com/cpu: "2"
+        run.googleapis.com/timeout: "900s"
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/vpc-access-connector: projects/PROJECT_ID/locations/REGION/connectors/tru-activity-connector
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: tru-activity-backend@PROJECT_ID.iam.gserviceaccount.com
+      containerConcurrency: 80
+      containers:
+      - image: gcr.io/PROJECT_ID/tru-activity-backend:latest
+        ports:
+        - name: http1
+          containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: ENV
+          value: "production"
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: db-config
+              key: host
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: db-config
+              key: port
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: db-config
+              key: name
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-config
+              key: user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-config
+              key: password
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-config
+              key: url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-config
+              key: secret
+        - name: CORS_ORIGINS
+          value: "https://YOUR_FRONTEND_DOMAIN.web.app,https://YOUR_FRONTEND_DOMAIN.firebaseapp.com"
+        - name: NOTIFICATION_EMAIL_FROM
+          valueFrom:
+            secretKeyRef:
+              name: email-config
+              key: from
+        - name: SENDGRID_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: email-config
+              key: sendgrid_api_key
+        - name: QR_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qr-config
+              key: secret
+        resources:
+          limits:
+            cpu: "2"
+            memory: "2Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3

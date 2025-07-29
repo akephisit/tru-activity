@@ -1,83 +1,94 @@
-# 🚀 TRU Activity Deployment Guide
+# TRU Activity - Google Cloud Platform Deployment Guide
 
-คู่มือการ deploy ระบบ TRU Activity สำหรับ production environment
+This guide provides comprehensive instructions for deploying the TRU Activity system to Google Cloud Platform using Cloud Run, Cloud SQL, and other GCP services.
 
-## 📋 Prerequisites
+## Architecture Overview
 
-### System Requirements
-- **OS**: Ubuntu 20.04+ หรือ CentOS 8+
-- **RAM**: อย่างน้อย 4GB (แนะนำ 8GB+)
-- **Storage**: อย่างน้อย 50GB SSD
-- **CPU**: อย่างน้อย 2 cores
-
-### Software Requirements
-- Docker 20.10+
-- Docker Compose 2.0+
-- Nginx (สำหรับ reverse proxy)
-- SSL Certificate (Let's Encrypt แนะนำ)
-
-## 🛠️ Production Setup
-
-### 1. Server Preparation
-
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Install Nginx
-sudo apt install nginx -y
-
-# Install Certbot for SSL
-sudo apt install certbot python3-certbot-nginx -y
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Firebase      │    │   Cloud Run      │    │   Cloud SQL     │
+│   Hosting       │◄───┤   (Backend)      │◄───┤   PostgreSQL    │
+│   (Frontend)    │    │                  │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                              │
+                              │
+                       ┌──────────────────┐
+                       │  Cloud Memorystore│
+                       │     Redis         │
+                       └──────────────────┘
 ```
 
-### 2. Clone และ Configure
+## Prerequisites
+
+### Required Tools
+- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
+- [Terraform](https://www.terraform.io/downloads) >= 1.0
+- [Docker](https://docs.docker.com/get-docker/)
+- [Firebase CLI](https://firebase.google.com/docs/cli)
+- [Node.js](https://nodejs.org/) >= 18
+- [Go](https://golang.org/doc/install) >= 1.21
+
+### Google Cloud Setup
+1. Create a new GCP project or select an existing one
+2. Enable billing for the project
+3. Install and authenticate with Google Cloud CLI:
+   ```bash
+   gcloud auth login
+   gcloud config set project YOUR_PROJECT_ID
+   ```
+
+## Quick Deployment
+
+### Automated Deployment
+Use the provided deployment script for a complete setup:
 
 ```bash
-# Clone repository
-git clone https://github.com/kruakemaths/tru-activity.git
-cd tru-activity
+# Make script executable
+chmod +x scripts/deploy.sh
 
-# Create production environment file
-cp backend/.env.example backend/.env.prod
+# Run full deployment
+./scripts/deploy.sh deploy
 ```
 
-### 3. Production Environment Variables
+The script will guide you through:
+- Authentication verification
+- Infrastructure provisioning
+- Backend deployment
+- Frontend deployment
+- Health checks
+- Monitoring setup
 
-แก้ไขไฟล์ `backend/.env.prod`:
+### Manual Deployment
 
-```env
-# Database Configuration
-DB_HOST=postgres
-DB_PORT=5432
-DB_USER=truactivity
-DB_PASSWORD=YOUR_STRONG_DATABASE_PASSWORD
-DB_NAME=tru_activity_prod
-DB_SSLMODE=require
+#### 1. Infrastructure Setup
 
-# Redis Configuration
-REDIS_HOST=redis
-REDIS_PORT=6379
-REDIS_PASSWORD=YOUR_STRONG_REDIS_PASSWORD
+```bash
+# Navigate to Terraform directory
+cd infrastructure/terraform
 
-# JWT Configuration
-JWT_SECRET=YOUR_SUPER_STRONG_JWT_SECRET_KEY_AT_LEAST_32_CHARACTERS
-JWT_EXPIRE_HOURS=24
+# Create terraform.tfvars file
+cat > terraform.tfvars << EOF
+project_id = "your-project-id"
+region = "asia-southeast1"
 
-# Server Configuration
-PORT=8080
-ENV=production
+# Database configuration
+db_password = "your-secure-database-password"
 
-# CORS Configuration
-CORS_ORIGINS=https://yourdomain.com
+# JWT configuration
+jwt_secret = "your-jwt-secret-key"
+
+# Email configuration
+email_from = "noreply@yourdomain.com"
+sendgrid_api_key = "your-sendgrid-api-key"
+
+# QR code configuration
+qr_secret = "your-qr-secret-key"
+EOF
+
+# Initialize and apply Terraform
+terraform init
+terraform plan
+terraform apply
 ```
 
 ### 4. Production Docker Compose

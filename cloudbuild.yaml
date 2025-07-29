@@ -1,0 +1,138 @@
+steps:
+  # Build backend Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/tru-activity-backend:latest'
+      - './backend'
+    id: 'build-backend'
+
+  # Push backend images
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA'
+    id: 'push-backend-sha'
+    waitFor: ['build-backend']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/tru-activity-backend:latest'
+    id: 'push-backend-latest'
+    waitFor: ['build-backend']
+
+  # Run database migrations
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Create a temporary Cloud Run job for migrations
+        gcloud run jobs create migration-job-${COMMIT_SHA} \
+          --image=gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA \
+          --region=$_REGION \
+          --service-account=tru-activity-migration@$PROJECT_ID.iam.gserviceaccount.com \
+          --set-env-vars="MIGRATION_MODE=true" \
+          --set-secrets="DB_HOST=db-config:host,DB_PORT=db-config:port,DB_NAME=db-config:name,DB_USER=db-config:user,DB_PASSWORD=db-config:password" \
+          --vpc-connector=projects/$PROJECT_ID/locations/$_REGION/connectors/tru-activity-connector \
+          --vpc-egress=private-ranges-only \
+          --memory=1Gi \
+          --cpu=1 \
+          --max-retries=2 \
+          --parallelism=1 \
+          --task-count=1
+        
+        # Execute the migration job
+        gcloud run jobs execute migration-job-${COMMIT_SHA} \
+          --region=$_REGION \
+          --wait
+        
+        # Clean up the migration job
+        gcloud run jobs delete migration-job-${COMMIT_SHA} \
+          --region=$_REGION \
+          --quiet
+    id: 'run-migrations'
+    waitFor: ['push-backend-sha']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'replace'
+      - 'backend/service.yaml'
+      - '--region=$_REGION'
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+      - 'REGION=$_REGION'
+    id: 'deploy-backend'
+    waitFor: ['run-migrations']
+
+  # Update service YAML with new image
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run services update tru-activity-backend \
+          --image=gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA \
+          --region=$_REGION
+    id: 'update-service-image'
+    waitFor: ['deploy-backend']
+
+  # Build frontend
+  - name: 'node:18'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd frontend
+        npm ci
+        npm run build
+    env:
+      - 'VITE_API_URL=https://tru-activity-backend-$_HASH-$_REGION.a.run.app'
+      - 'VITE_WS_URL=wss://tru-activity-backend-$_HASH-$_REGION.a.run.app'
+      - 'VITE_ENV=production'
+    id: 'build-frontend'
+
+  # Deploy frontend to Firebase Hosting
+  - name: 'gcr.io/$PROJECT_ID/firebase'
+    args:
+      - 'deploy'
+      - '--only=hosting'
+      - '--project=$PROJECT_ID'
+    dir: 'frontend'
+    id: 'deploy-frontend'
+    waitFor: ['build-frontend']
+
+  # Run health checks
+  - name: 'gcr.io/cloud-builders/curl'
+    args:
+      - '-f'
+      - 'https://tru-activity-backend-$_HASH-$_REGION.a.run.app/health'
+    id: 'health-check'
+    waitFor: ['update-service-image']
+
+# Build configuration
+options:
+  machineType: 'E2_HIGHCPU_8'
+  substitutionOption: 'ALLOW_LOOSE'
+  logging: CLOUD_LOGGING_ONLY
+
+# Substitutions
+substitutions:
+  _REGION: 'asia-southeast1'
+  _HASH: '${COMMIT_SHA:0:7}'
+
+# Tags for organization
+tags:
+  - 'tru-activity'
+  - 'backend'
+  - 'frontend'
+
+# Timeout
+timeout: '1200s'
