@@ -1,4 +1,4 @@
-import { writable, type Writable } from 'svelte/stores';
+import { writable, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
 

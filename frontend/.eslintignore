@@ -1,0 +1,11 @@
+build/
+.svelte-kit/
+dist/
+node_modules/
+**/*.d.ts
+static/
+src/lib/generated/
+*.config.js
+*.config.ts
+vite.config.ts
+svelte.config.js
