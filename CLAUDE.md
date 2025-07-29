@@ -98,3 +98,7 @@ The main data model is defined in `lib/components/schemas.ts` with fields:
 
 - Always explain in Thai language
   - `อธิบายเป็นภาษาไทยเสมอ`
+
+## Project Workflow Reminders
+
+- เมื่อทำการเขียนโค้ด หรือพัฒนาเสร็จให้ทำการ อัปเดตใน CLAUDE.md ทุกครั้ง

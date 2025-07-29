@@ -1,0 +1,252 @@
+# GraphQL schema definition file
+
+scalar Time
+
+type User {
+  id: ID!
+  studentID: String!
+  email: String!
+  firstName: String!
+  lastName: String!
+  role: UserRole!
+  qrSecret: String!
+  faculty: Faculty
+  department: Department
+  isActive: Boolean!
+  lastLoginAt: Time
+  createdAt: Time!
+  updatedAt: Time!
+  participations: [Participation!]!
+  subscriptions: [Subscription!]!
+}
+
+enum UserRole {
+  STUDENT
+  SUPER_ADMIN
+  FACULTY_ADMIN
+  REGULAR_ADMIN
+}
+
+type Faculty {
+  id: ID!
+  name: String!
+  code: String!
+  description: String
+  isActive: Boolean!
+  createdAt: Time!
+  updatedAt: Time!
+  departments: [Department!]!
+  users: [User!]!
+  activities: [Activity!]!
+}
+
+type Department {
+  id: ID!
+  name: String!
+  code: String!
+  faculty: Faculty!
+  isActive: Boolean!
+  createdAt: Time!
+  updatedAt: Time!
+  users: [User!]!
+  activities: [Activity!]!
+}
+
+type Activity {
+  id: ID!
+  title: String!
+  description: String
+  type: ActivityType!
+  status: ActivityStatus!
+  startDate: Time!
+  endDate: Time!
+  location: String
+  maxParticipants: Int
+  requireApproval: Boolean!
+  points: Int!
+  faculty: Faculty
+  department: Department
+  createdBy: User!
+  createdAt: Time!
+  updatedAt: Time!
+  participations: [Participation!]!
+}
+
+enum ActivityType {
+  WORKSHOP
+  SEMINAR
+  COMPETITION
+  VOLUNTEER
+  OTHER
+}
+
+enum ActivityStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+type Participation {
+  id: ID!
+  user: User!
+  activity: Activity!
+  status: ParticipationStatus!
+  registeredAt: Time!
+  approvedAt: Time
+  attendedAt: Time
+  notes: String
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+enum ParticipationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ATTENDED
+  ABSENT
+}
+
+type Subscription {
+  id: ID!
+  user: User!
+  type: SubscriptionType!
+  status: SubscriptionStatus!
+  startDate: Time!
+  endDate: Time!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+enum SubscriptionType {
+  BASIC
+  PREMIUM
+  VIP
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input RegisterInput {
+  studentID: String!
+  email: String!
+  firstName: String!
+  lastName: String!
+  password: String!
+  facultyID: ID
+  departmentID: ID
+}
+
+input CreateActivityInput {
+  title: String!
+  description: String
+  type: ActivityType!
+  startDate: Time!
+  endDate: Time!
+  location: String
+  maxParticipants: Int
+  requireApproval: Boolean!
+  points: Int!
+  facultyID: ID
+  departmentID: ID
+}
+
+input UpdateActivityInput {
+  title: String
+  description: String
+  type: ActivityType
+  status: ActivityStatus
+  startDate: Time
+  endDate: Time
+  location: String
+  maxParticipants: Int
+  requireApproval: Boolean
+  points: Int
+  facultyID: ID
+  departmentID: ID
+}
+
+input CreateFacultyInput {
+  name: String!
+  code: String!
+  description: String
+}
+
+input CreateDepartmentInput {
+  name: String!
+  code: String!
+  facultyID: ID!
+}
+
+type Query {
+  # User queries
+  me: User
+  users(limit: Int, offset: Int): [User!]!
+  user(id: ID!): User
+  
+  # Faculty queries
+  faculties: [Faculty!]!
+  faculty(id: ID!): Faculty
+  
+  # Department queries
+  departments(facultyID: ID): [Department!]!
+  department(id: ID!): Department
+  
+  # Activity queries
+  activities(limit: Int, offset: Int, facultyID: ID, status: ActivityStatus): [Activity!]!
+  activity(id: ID!): Activity
+  myActivities: [Activity!]!
+  
+  # Participation queries
+  participations(activityID: ID, userID: ID): [Participation!]!
+  myParticipations: [Participation!]!
+}
+
+type Mutation {
+  # Authentication
+  login(input: LoginInput!): AuthPayload!
+  register(input: RegisterInput!): AuthPayload!
+  refreshToken: AuthPayload!
+  
+  # Activity management
+  createActivity(input: CreateActivityInput!): Activity!
+  updateActivity(id: ID!, input: UpdateActivityInput!): Activity!
+  deleteActivity(id: ID!): Boolean!
+  
+  # Participation management
+  joinActivity(activityID: ID!): Participation!
+  leaveActivity(activityID: ID!): Boolean!
+  approveParticipation(participationID: ID!): Participation!
+  rejectParticipation(participationID: ID!): Participation!
+  markAttendance(participationID: ID!, attended: Boolean!): Participation!
+  
+  # Faculty management (Admin only)
+  createFaculty(input: CreateFacultyInput!): Faculty!
+  updateFaculty(id: ID!, input: CreateFacultyInput!): Faculty!
+  deleteFaculty(id: ID!): Boolean!
+  
+  # Department management (Admin only)
+  createDepartment(input: CreateDepartmentInput!): Department!
+  updateDepartment(id: ID!, input: CreateDepartmentInput!): Department!
+  deleteDepartment(id: ID!): Boolean!
+}
+
+type Subscription {
+  # Real-time updates for activities
+  activityUpdated(activityID: ID): Activity!
+  participationUpdated(activityID: ID): Participation!
+}
