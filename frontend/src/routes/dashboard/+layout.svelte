@@ -36,6 +36,7 @@
 		BarChart3
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import NotificationCenter from '$lib/components/NotificationCenter.svelte';
 
 	let { children } = $props();
 
@@ -66,6 +67,18 @@
 			roles: ['STUDENT', 'SUPER_ADMIN', 'FACULTY_ADMIN', 'REGULAR_ADMIN']
 		},
 		{
+			title: 'แดชบอร์ดผู้ดูแลระบบ',
+			href: '/dashboard/admin',
+			icon: BarChart3,
+			roles: ['SUPER_ADMIN']
+		},
+		{
+			title: 'แดชบอร์ดคณะ',
+			href: '/dashboard/faculty-admin',
+			icon: Building2,
+			roles: ['FACULTY_ADMIN']
+		},
+		{
 			title: 'กิจกรรม',
 			href: '/dashboard/activities',
 			icon: Calendar,
@@ -74,6 +87,18 @@
 		{
 			title: 'กิจกรรมของฉัน',
 			href: '/dashboard/my-activities',
+			icon: UserCheck,
+			roles: ['STUDENT']
+		},
+		{
+			title: 'QR Scanner',
+			href: '/dashboard/scanner',
+			icon: UserCheck,
+			roles: ['REGULAR_ADMIN']
+		},
+		{
+			title: 'My QR Code',
+			href: '/dashboard/my-qr',
 			icon: UserCheck,
 			roles: ['STUDENT']
 		},
@@ -196,4 +221,7 @@
 			</main>
 		</SidebarInset>
 	</SidebarProvider>
+
+	<!-- Real-time Notification Center -->
+	<NotificationCenter position="top-right" enableSound={true} />
 {/if}

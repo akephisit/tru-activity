@@ -1,12 +1,25 @@
 <script lang="ts">
 	import { query } from '@apollo/client';
 	import { GET_ACTIVITIES, GET_MY_PARTICIPATIONS } from '$lib/graphql/queries';
-	import { user, isAdmin } from '$lib/stores/auth';
+	import { user, isAdmin, isSuperAdmin, isFacultyAdmin } from '$lib/stores/auth';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Calendar, Users, Trophy, Clock } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+
+	// Auto-redirect based on user role
+	onMount(() => {
+		if ($isSuperAdmin) {
+			goto('/dashboard/admin');
+		} else if ($isFacultyAdmin) {
+			goto('/dashboard/faculty-admin');
+		} else if ($user?.role === 'REGULAR_ADMIN') {
+			goto('/dashboard/scanner');
+		}
+		// Students stay on the default dashboard
+	});
 
 	const activitiesQuery = query(GET_ACTIVITIES, {
 		variables: { limit: 10, status: 'ACTIVE' }

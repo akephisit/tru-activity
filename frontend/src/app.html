@@ -3,12 +3,136 @@
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		
+		<!-- PWA Meta Tags -->
 		<title>TRU Activity - ระบบเก็บกิจกรรมมหาวิทยาลัย</title>
 		<meta name="description" content="ระบบเก็บกิจกรรมมหาวิทยาลัยเทคโนโลยีราชมงคลธัญบุรี" />
+		<meta name="theme-color" content="#2563eb" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="TRU Activity" />
+		
+		<!-- PWA Manifest -->
+		<link rel="manifest" href="/manifest.json" />
+		
+		<!-- Apple Touch Icons -->
+		<link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+		<link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+		
+		<!-- Microsoft Tiles -->
+		<meta name="msapplication-TileColor" content="#2563eb" />
+		<meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+		
+		<!-- Splash Screen Images for iOS -->
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<link rel="apple-touch-startup-image" href="/splash/iphone5_splash.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)">
+		<link rel="apple-touch-startup-image" href="/splash/iphone6_splash.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+		<link rel="apple-touch-startup-image" href="/splash/iphoneplus_splash.png" media="(device-width: 621px) and (device-height: 1104px) and (-webkit-device-pixel-ratio: 3)">
+		<link rel="apple-touch-startup-image" href="/splash/iphonex_splash.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
+		<link rel="apple-touch-startup-image" href="/splash/iphonexr_splash.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)">
+		<link rel="apple-touch-startup-image" href="/splash/iphonexsmax_splash.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)">
+		<link rel="apple-touch-startup-image" href="/splash/ipad_splash.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)">
+		<link rel="apple-touch-startup-image" href="/splash/ipadpro1_splash.png" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2)">
+		<link rel="apple-touch-startup-image" href="/splash/ipadpro2_splash.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2)">
+		<link rel="apple-touch-startup-image" href="/splash/ipadpro3_splash.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)">
+		
+		<!-- Security Headers -->
+		<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+		<meta http-equiv="X-Frame-Options" content="DENY" />
+		<meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+		
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover" class="min-h-screen bg-background font-sans antialiased">
 		<div style="display: contents">%sveltekit.body%</div>
+		
+		<!-- Service Worker Registration -->
+		<script>
+			if ('serviceWorker' in navigator) {
+				window.addEventListener('load', () => {
+					navigator.serviceWorker.register('/sw.js')
+						.then((registration) => {
+							console.log('SW registered: ', registration);
+							
+							// Check for updates
+							registration.addEventListener('updatefound', () => {
+								const newWorker = registration.installing;
+								if (newWorker) {
+									newWorker.addEventListener('statechange', () => {
+										if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+											// New version available
+											if (confirm('New version available! Reload to update?')) {
+												newWorker.postMessage({ type: 'SKIP_WAITING' });
+												window.location.reload();
+											}
+										}
+									});
+								}
+							});
+						})
+						.catch((registrationError) => {
+							console.log('SW registration failed: ', registrationError);
+						});
+				});
+
+				// Handle service worker updates
+				navigator.serviceWorker.addEventListener('controllerchange', () => {
+					window.location.reload();
+				});
+			}
+
+			// Install prompt handling
+			let deferredPrompt;
+			window.addEventListener('beforeinstallprompt', (e) => {
+				e.preventDefault();
+				deferredPrompt = e;
+				
+				// Show install button/banner
+				const installButton = document.getElementById('install-button');
+				if (installButton) {
+					installButton.style.display = 'block';
+					installButton.addEventListener('click', () => {
+						deferredPrompt.prompt();
+						deferredPrompt.userChoice.then((choiceResult) => {
+							console.log('User choice:', choiceResult.outcome);
+							deferredPrompt = null;
+							installButton.style.display = 'none';
+						});
+					});
+				}
+			});
+
+			// Track app installation
+			window.addEventListener('appinstalled', (evt) => {
+				console.log('App installed successfully');
+				// Hide install button
+				const installButton = document.getElementById('install-button');
+				if (installButton) {
+					installButton.style.display = 'none';
+				}
+			});
+
+			// Handle offline/online status
+			function updateOnlineStatus() {
+				const statusElement = document.getElementById('connection-status');
+				if (statusElement) {
+					if (navigator.onLine) {
+						statusElement.textContent = 'Online';
+						statusElement.className = 'status-online';
+					} else {
+						statusElement.textContent = 'Offline';
+						statusElement.className = 'status-offline';
+					}
+				}
+			}
+
+			window.addEventListener('online', updateOnlineStatus);
+			window.addEventListener('offline', updateOnlineStatus);
+			
+			// Initial status check
+			document.addEventListener('DOMContentLoaded', updateOnlineStatus);
+		</script>
 	</body>
 </html>
