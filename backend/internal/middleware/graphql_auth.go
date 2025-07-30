@@ -23,6 +23,11 @@ type AuthContext struct {
 	User        *models.User
 	Claims      *auth.JWTClaims
 	Permissions *permissions.PermissionChecker
+	// Additional fields for convenience
+	UserID      uint
+	Role        models.UserRole
+	FacultyID   *uint
+	DepartmentID *uint
 }
 
 const AuthContextKey = "auth"
@@ -70,9 +75,13 @@ func (ae *authExtension) InterceptOperation(ctx context.Context, next graphql.Op
 					var user models.User
 					if err := ae.db.Preload("Faculty").Preload("Department").First(&user, claims.UserID).Error; err == nil {
 						authCtx := &AuthContext{
-							User:        &user,
-							Claims:      claims,
-							Permissions: ae.permissions,
+							User:         &user,
+							Claims:       claims,
+							Permissions:  ae.permissions,
+							UserID:       user.ID,
+							Role:         user.Role,
+							FacultyID:    user.FacultyID,
+							DepartmentID: user.DepartmentID,
 						}
 						ctx = context.WithValue(ctx, AuthContextKey, authCtx)
 					}

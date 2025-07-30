@@ -184,7 +184,7 @@
   }
 
   // Auto-refresh QR data every minute to keep it fresh
-  let refreshInterval: number;
+  let refreshInterval: ReturnType<typeof setInterval>;
   onMount(() => {
     refreshInterval = setInterval(() => {
       if (isQRExpired()) {
@@ -281,7 +281,7 @@
 
           <!-- Action Buttons -->
           <div class="grid grid-cols-2 gap-3">
-            <Button variant="outline" on:click={copyQRData} disabled={isQRExpired()}>
+            <Button variant="outline" onclick={copyQRData} disabled={isQRExpired()}>
               {#if copied}
                 <CheckCircle size={16} class="mr-2 text-green-600" />
                 Copied!
@@ -290,7 +290,7 @@
                 Copy Data
               {/if}
             </Button>
-            <Button variant="outline" on:click={downloadQRCode} disabled={!qrCodeDataURL || isQRExpired()}>
+            <Button variant="outline" onclick={downloadQRCode} disabled={!qrCodeDataURL || isQRExpired()}>
               <Download size={16} class="mr-2" />
               Download
             </Button>
@@ -323,7 +323,7 @@
           
           <Button 
             variant="outline" 
-            on:click={refreshQRSecret} 
+            onclick={refreshQRSecret} 
             disabled={loading}
             class="w-full"
           >

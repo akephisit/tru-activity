@@ -3,7 +3,7 @@ package performance
 import (
 	"context"
 	"fmt"
-	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,12 +23,6 @@ type DataLoader interface {
 // BatchFunc defines the function signature for batch loading
 type BatchFunc func(ctx context.Context, keys []string) ([]interface{}, error)
 
-// CacheConfig defines caching configuration
-type CacheConfig struct {
-	TTL         time.Duration
-	MaxSize     int
-	EnableRedis bool
-}
 
 // dataLoader implements DataLoader with batching and caching
 type dataLoader struct {
@@ -305,7 +299,9 @@ func NewUserDataLoader(db *gorm.DB, redisClient *redis.Client) *UserDataLoader {
 		BatchSize:  50,
 		BatchDelay: 16 * time.Millisecond,
 		Cache: CacheConfig{
+			KeyPrefix:   "user:",
 			TTL:         15 * time.Minute,
+			Tags:        []string{"users"},
 			MaxSize:     1000,
 			EnableRedis: true,
 		},
@@ -358,7 +354,9 @@ func NewActivityDataLoader(db *gorm.DB, redisClient *redis.Client) *ActivityData
 		BatchSize:  50,
 		BatchDelay: 16 * time.Millisecond,
 		Cache: CacheConfig{
+			KeyPrefix:   "activity:",
 			TTL:         10 * time.Minute,
+			Tags:        []string{"activities"},
 			MaxSize:     500,
 			EnableRedis: true,
 		},
@@ -411,7 +409,9 @@ func NewFacultyDataLoader(db *gorm.DB, redisClient *redis.Client) *FacultyDataLo
 		BatchSize:  30,
 		BatchDelay: 16 * time.Millisecond,
 		Cache: CacheConfig{
+			KeyPrefix:   "faculty:",
 			TTL:         30 * time.Minute, // Faculties change less frequently
+			Tags:        []string{"faculties"},
 			MaxSize:     100,
 			EnableRedis: true,
 		},
@@ -500,7 +500,9 @@ func NewParticipationDataLoader(db *gorm.DB, redisClient *redis.Client) *Partici
 		BatchSize:  40,
 		BatchDelay: 16 * time.Millisecond,
 		Cache: CacheConfig{
+			KeyPrefix:   "participation:",
 			TTL:         5 * time.Minute, // Participations change frequently
+			Tags:        []string{"participations"},
 			MaxSize:     800,
 			EnableRedis: true,
 		},

@@ -178,7 +178,7 @@
       'COMPLETED': 'เสร็จสิ้น',
       'CANCELLED': 'ยกเลิก'
     };
-    return statusMap[status] || status;
+    return statusMap[status as keyof typeof statusMap] || status;
   }
 
   function formatDate(dateString: string) {
@@ -205,10 +205,10 @@
       </p>
     </div>
     <div class="flex gap-2">
-      <Button variant="outline" on:click={loadDashboardData} disabled={loading}>
+      <Button variant="outline" onclick={loadDashboardData} disabled={loading}>
         {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
       </Button>
-      <Button on:click={() => goto('/dashboard/manage-activities')}>
+      <Button onclick={() => goto('/dashboard/manage-activities')}>
         <Plus class="w-4 h-4 mr-2" />
         สร้างกิจกรรม
       </Button>
@@ -287,7 +287,7 @@
           <CardTitle>กิจกรรมล่าสุด</CardTitle>
           <p class="text-sm text-muted-foreground">กิจกรรมของคณะ</p>
         </div>
-        <Button variant="outline" size="sm" on:click={() => goto('/dashboard/manage-activities')}>
+        <Button variant="outline" size="sm" onclick={() => goto('/dashboard/manage-activities')}>
           <Settings class="w-4 h-4 mr-2" />
           จัดการ
         </Button>
@@ -333,7 +333,7 @@
           <CardTitle>นักศึกษาที่ใช้งานมากที่สุด</CardTitle>
           <p class="text-sm text-muted-foreground">นักศึกษาของคณะ</p>
         </div>
-        <Button variant="outline" size="sm" on:click={() => goto('/dashboard/users')}>
+        <Button variant="outline" size="sm" onclick={() => goto('/dashboard/users')}>
           <Users class="w-4 h-4 mr-2" />
           ดูทั้งหมด
         </Button>
@@ -417,19 +417,19 @@
     </CardHeader>
     <CardContent>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Button variant="outline" class="h-20 flex-col" on:click={() => goto('/dashboard/manage-activities')}>
+        <Button variant="outline" class="h-20 flex-col" onclick={() => goto('/dashboard/manage-activities')}>
           <Calendar class="w-6 h-6 mb-2" />
           <span class="text-sm">จัดการกิจกรรม</span>
         </Button>
-        <Button variant="outline" class="h-20 flex-col" on:click={() => goto('/dashboard/users')}>
+        <Button variant="outline" class="h-20 flex-col" onclick={() => goto('/dashboard/users')}>
           <Users class="w-6 h-6 mb-2" />
           <span class="text-sm">จัดการนักศึกษา</span>
         </Button>
-        <Button variant="outline" class="h-20 flex-col" on:click={() => goto('/dashboard/reports')}>
+        <Button variant="outline" class="h-20 flex-col" onclick={() => goto('/dashboard/reports')}>
           <BarChart3 class="w-6 h-6 mb-2" />
           <span class="text-sm">ดูรายงาน</span>
         </Button>
-        <Button variant="outline" class="h-20 flex-col" on:click={() => goto('/dashboard/departments')}>
+        <Button variant="outline" class="h-20 flex-col" onclick={() => goto('/dashboard/departments')}>
           <GraduationCap class="w-6 h-6 mb-2" />
           <span class="text-sm">จัดการภาควิชา</span>
         </Button>

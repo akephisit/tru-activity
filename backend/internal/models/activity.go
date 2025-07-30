@@ -154,3 +154,18 @@ type QRScanLog struct {
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `json:"deleted_at" gorm:"index"`
 }
+
+// IsSubscriptionData implements the GraphQL union interface for Activity
+func (a *Activity) IsSubscriptionData() {}
+
+// IsSubscriptionData implements the GraphQL union interface for ActivityTemplate
+func (at *ActivityTemplate) IsSubscriptionData() {}
+
+// IsSubscriptionData implements the GraphQL union interface for ActivityAssignment
+func (aa *ActivityAssignment) IsSubscriptionData() {}
+
+// IsSubscriptionData implements the GraphQL union interface for Participation
+func (p *Participation) IsSubscriptionData() {}
+
+// IsSubscriptionData implements the GraphQL union interface for QRScanLog
+func (qsl *QRScanLog) IsSubscriptionData() {}

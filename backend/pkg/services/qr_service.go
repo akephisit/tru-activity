@@ -195,8 +195,8 @@ func (qs *QRService) GetActivityQRScans(activityID uint, limit int) ([]models.QR
 
 // Helper methods
 
-func (qs *QRService) createFailedResult(message, request string, errorDetails string) *QRScanResult {
-	scanLog := qs.createScanLog(parseQRScanRequest(request), nil, nil, false, errorDetails)
+func (qs *QRService) createFailedResult(message string, req *QRScanRequest, errorDetails string) *QRScanResult {
+	scanLog := qs.createScanLog(req, nil, nil, false, errorDetails)
 	qs.DB.Create(&scanLog)
 
 	return &QRScanResult{

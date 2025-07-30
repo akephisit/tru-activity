@@ -215,11 +215,13 @@
   <div class="flex items-center justify-between">
     <h1 class="text-3xl font-bold">Subscription Management</h1>
     <Dialog bind:open={showCreateDialog}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus size={16} class="mr-2" />
-          Add Subscription
-        </Button>
+      <DialogTrigger>
+        {#snippet child({ props })}
+          <Button {...props}>
+            <Plus size={16} class="mr-2" />
+            Add Subscription
+          </Button>
+        {/snippet}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -228,7 +230,10 @@
         <form on:submit|preventDefault={createSubscription} class="space-y-4">
           <div>
             <Label for="faculty">Faculty</Label>
-            <Select bind:value={formData.facultyID}>
+            <Select type="single" onValueChange={(value: string | string[]) => { 
+              const val = Array.isArray(value) ? value[0] : value;
+              if (val) formData.facultyID = val; 
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Select faculty" />
               </SelectTrigger>
@@ -243,7 +248,10 @@
           </div>
           <div>
             <Label for="type">Subscription Type</Label>
-            <Select bind:value={formData.type}>
+            <Select type="single" onValueChange={(value: string | string[]) => { 
+              const val = Array.isArray(value) ? value[0] : value;
+              if (val) formData.type = val; 
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Select subscription type" />
               </SelectTrigger>
@@ -273,7 +281,7 @@
             />
           </div>
           <div class="flex justify-end gap-2">
-            <Button variant="outline" type="button" on:click={() => showCreateDialog = false}>
+            <Button variant="outline" type="button" onclick={() => showCreateDialog = false}>
               Cancel
             </Button>
             <Button type="submit">Create Subscription</Button>

@@ -436,6 +436,75 @@ type Query {
   qrScanLogs(activityID: ID, userID: ID, limit: Int): [QRScanLog!]! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
 }
 
+# Subscription types
+type SubscriptionPayload {
+  type: String!
+  timestamp: Time!
+  data: SubscriptionData
+  metadata: SubscriptionMetadata
+}
+
+union SubscriptionData = User | Activity | Faculty | Participation | FacultySubscription | SystemAlert | ActivityAssignment
+
+type SubscriptionMetadata {
+  source: String
+  userID: ID
+  facultyID: ID
+  activityID: ID
+  connectionID: String
+}
+
+input SubscriptionFilter {
+  facultyID: ID
+  activityID: ID
+  userID: ID
+  types: [String!]
+}
+
+type SystemAlert {
+  id: ID!
+  type: String!
+  level: String!
+  title: String!
+  message: String!
+  facultyID: ID
+  userID: ID
+  data: String
+  timestamp: Time!
+}
+
+type Subscription {
+  # Personal notifications for authenticated users
+  personalNotifications(filter: SubscriptionFilter): SubscriptionPayload! @auth
+  
+  # Activity-specific updates
+  activityUpdates(activityID: ID!): SubscriptionPayload! @auth
+  
+  # Faculty-wide updates for faculty members
+  facultyUpdates(facultyID: ID!): SubscriptionPayload! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  
+  # System-wide alerts for admins
+  systemAlerts(filter: SubscriptionFilter): SubscriptionPayload! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  
+  # QR scan events for admins
+  qrScanEvents(activityID: ID): SubscriptionPayload! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN, REGULAR_ADMIN])
+  
+  # Participation events
+  participationEvents(activityID: ID, userID: ID): SubscriptionPayload! @auth
+  
+  # Subscription warnings for faculty admins
+  subscriptionWarnings(facultyID: ID): SubscriptionPayload! @hasRole(roles: [SUPER_ADMIN, FACULTY_ADMIN])
+  
+  # Activity assignments for regular admins
+  activityAssignments: SubscriptionPayload! @hasRole(roles: [REGULAR_ADMIN])
+  
+  # New activity notifications
+  newActivities(facultyID: ID): SubscriptionPayload! @auth
+  
+  # Connection heartbeat
+  heartbeat: String! @auth
+}
+
 type Mutation {
   # Authentication
   login(input: LoginInput!): AuthPayload!

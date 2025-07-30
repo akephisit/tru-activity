@@ -18,7 +18,8 @@
   "dependencies": {
     "@apollo/client": "^3.11.8",
     "graphql": "^16.9.0",
-    "graphql-tag": "^2.12.6"
+    "graphql-tag": "^2.12.6",
+    "lucide-svelte": "^0.534.0"
   },
   "devDependencies": {
     "@dnd-kit-svelte/core": "^0.0.8",

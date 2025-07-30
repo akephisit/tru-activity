@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { query } from '@apollo/client';
+	import { client } from '$lib/graphql/client';
 	import { GET_ACTIVITIES, GET_MY_PARTICIPATIONS } from '$lib/graphql/queries';
 	import { user, isAdmin, isSuperAdmin, isFacultyAdmin } from '$lib/stores/auth';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
@@ -8,6 +8,10 @@
 	import { Calendar, Users, Trophy, Clock } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+
+	let activities = $state<any[]>([]);
+	let myParticipations = $state<any[]>([]);
+	let isLoading = $state(true);
 
 	// Auto-redirect based on user role
 	onMount(() => {
@@ -19,28 +23,51 @@
 			goto('/dashboard/scanner');
 		}
 		// Students stay on the default dashboard
+		
+		// Load data after role check
+		loadData();
 	});
 
-	const activitiesQuery = query(GET_ACTIVITIES, {
-		variables: { limit: 10, status: 'ACTIVE' }
-	});
-	
-	const myParticipationsQuery = query(GET_MY_PARTICIPATIONS);
+	async function loadData() {
+		try {
+			isLoading = true;
+			
+			// Load activities and participations in parallel
+			const [activitiesResult, participationsResult] = await Promise.all([
+				client.query({
+					query: GET_ACTIVITIES,
+					variables: { limit: 10, status: 'ACTIVE' }
+				}),
+				client.query({
+					query: GET_MY_PARTICIPATIONS
+				})
+			]);
 
-	$: activities = $activitiesQuery.data?.activities || [];
-	$: myParticipations = $myParticipationsQuery.data?.myParticipations || [];
+			if (activitiesResult.data?.activities) {
+				activities = activitiesResult.data.activities;
+			}
+			
+			if (participationsResult.data?.myParticipations) {
+				myParticipations = participationsResult.data.myParticipations;
+			}
+		} catch (error) {
+			console.error('Failed to load dashboard data:', error);
+		} finally {
+			isLoading = false;
+		}
+	}
 	
 	// Calculate statistics
-	$: totalActivities = activities.length;
-	$: myActiveParticipations = myParticipations.filter(p => 
+	const totalActivities = $derived(activities.length);
+	const myActiveParticipations = $derived(myParticipations.filter(p => 
 		['PENDING', 'APPROVED'].includes(p.status)
-	).length;
-	$: myCompletedActivities = myParticipations.filter(p => 
+	).length);
+	const myCompletedActivities = $derived(myParticipations.filter(p => 
 		p.status === 'ATTENDED'
-	).length;
-	$: totalPoints = myParticipations
+	).length);
+	const totalPoints = $derived(myParticipations
 		.filter(p => p.status === 'ATTENDED')
-		.reduce((sum, p) => sum + (p.activity.points || 0), 0);
+		.reduce((sum, p) => sum + (p.activity.points || 0), 0));
 
 	function formatDate(dateString: string) {
 		return new Date(dateString).toLocaleDateString('th-TH', {
@@ -51,7 +78,7 @@
 	}
 
 	function getStatusBadge(status: string) {
-		const statusMap = {
+		const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
 			'DRAFT': { label: 'ร่าง', variant: 'secondary' },
 			'ACTIVE': { label: 'เปิดรับสมัคร', variant: 'default' },
 			'COMPLETED': { label: 'เสร็จสิ้น', variant: 'outline' },
@@ -61,11 +88,11 @@
 	}
 
 	function getParticipationStatusBadge(status: string) {
-		const statusMap = {
+		const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
 			'PENDING': { label: 'รอการอนุมัติ', variant: 'secondary' },
 			'APPROVED': { label: 'อนุมัติแล้ว', variant: 'default' },
 			'REJECTED': { label: 'ปฏิเสธ', variant: 'destructive' },
-			'ATTENDED': { label: 'เข้าร่วมแล้ว', variant: 'success' },
+			'ATTENDED': { label: 'เข้าร่วมแล้ว', variant: 'default' },
 			'ABSENT': { label: 'ไม่เข้าร่วม', variant: 'outline' }
 		};
 		return statusMap[status] || { label: status, variant: 'secondary' };

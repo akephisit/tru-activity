@@ -346,6 +346,7 @@ func (h *SSEHandler) HandleSubscribe(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
 	}
+	_ = claims // TODO: Use claims for authorization logic
 
 	// Parse subscription request
 	var subscription SSESubscription
@@ -390,6 +391,7 @@ func (h *SSEHandler) HandleUnsubscribe(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
 	}
+	_ = claims // TODO: Use claims for authorization logic
 
 	var subscription SSESubscription
 	if err := c.BodyParser(&subscription); err != nil {

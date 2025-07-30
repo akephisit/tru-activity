@@ -67,3 +67,41 @@ const (
 	NotificationStatusSent    NotificationStatus = "sent"
 	NotificationStatusFailed  NotificationStatus = "failed"
 )
+
+// AlertSeverity represents the severity level of system alerts
+type AlertSeverity string
+
+const (
+	AlertSeverityInfo     AlertSeverity = "info"
+	AlertSeverityWarning  AlertSeverity = "warning"
+	AlertSeverityError    AlertSeverity = "error"
+	AlertSeverityCritical AlertSeverity = "critical"
+)
+
+// SystemAlert represents system-wide alerts and notifications
+type SystemAlert struct {
+	ID          uint           `json:"id" gorm:"primaryKey"`
+	Type        string         `json:"type" gorm:"not null"`
+	Message     string         `json:"message" gorm:"not null"`
+	Severity    AlertSeverity  `json:"severity" gorm:"not null"`
+	TargetRoles []UserRole     `json:"target_roles" gorm:"serializer:json"`
+	FacultyID   *uint          `json:"faculty_id,omitempty"`
+	Faculty     *Faculty       `json:"faculty,omitempty"`
+	Resolved    bool           `json:"resolved" gorm:"default:false"`
+	ResolvedAt  *time.Time     `json:"resolved_at,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+}
+
+// IsSubscriptionData implements the GraphQL union interface for SystemAlert
+func (sa *SystemAlert) IsSubscriptionData() {}
+
+// IsSubscriptionData implements the GraphQL union interface for SystemMetrics
+func (sm *SystemMetrics) IsSubscriptionData() {}
+
+// IsSubscriptionData implements the GraphQL union interface for FacultyMetrics
+func (fm *FacultyMetrics) IsSubscriptionData() {}
+
+// IsSubscriptionData implements the GraphQL union interface for NotificationLog
+func (nl *NotificationLog) IsSubscriptionData() {}

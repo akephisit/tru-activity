@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { query } from '@apollo/client';
+	import { client } from '$lib/graphql/client';
 	import { GET_ME } from '$lib/graphql/queries';
 	import { authStore, isAuthenticated, user, isAdmin } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
@@ -40,16 +41,34 @@
 
 	let { children } = $props();
 
-	const meQuery = query(GET_ME);
-
 	// Redirect if not authenticated
-	$: if (!$isAuthenticated) {
-		goto('/login');
-	}
+	$effect(() => {
+		if (!$isAuthenticated) {
+			goto('/login');
+		}
+	});
 
-	// Update user info when query loads
-	$: if ($meQuery.data?.me) {
-		authStore.updateUser($meQuery.data.me);
+	// Load user data on mount if authenticated
+	$effect(() => {
+		if ($isAuthenticated && !$user) {
+			loadUserData();
+		}
+	});
+
+	async function loadUserData() {
+		try {
+			const result = await client.query({
+				query: GET_ME
+			});
+			if (result.data?.me) {
+				authStore.updateUser(result.data.me);
+			}
+		} catch (error) {
+			console.error('Failed to load user data:', error);
+			// If query fails due to auth, logout
+			authStore.logout();
+			goto('/login');
+		}
 	}
 
 	function handleLogout() {
@@ -59,7 +78,7 @@
 	}
 
 	// Navigation items based on user role
-	$: navigationItems = [
+	const navigationItems = $derived([
 		{
 			title: 'หน้าหลัก',
 			href: '/dashboard',
@@ -132,11 +151,11 @@
 			icon: BarChart3,
 			roles: ['SUPER_ADMIN', 'FACULTY_ADMIN', 'REGULAR_ADMIN']
 		}
-	];
+	]);
 
-	$: filteredNavigation = navigationItems.filter(item => 
+	const filteredNavigation = $derived(navigationItems.filter(item => 
 		item.roles.includes($user?.role || 'STUDENT')
-	);
+	));
 </script>
 
 {#if $isAuthenticated}
@@ -160,9 +179,13 @@
 				<SidebarMenu>
 					{#each filteredNavigation as item}
 						<SidebarMenuItem>
-							<SidebarMenuButton href={item.href}>
-								<svelte:component this={item.icon} class="h-4 w-4" />
-								<span>{item.title}</span>
+							<SidebarMenuButton isActive={$page.url.pathname === item.href}>
+								{#snippet child({ props })}
+									<a href={item.href} {...props}>
+										<item.icon class="h-4 w-4" />
+										<span>{item.title}</span>
+									</a>
+								{/snippet}
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 					{/each}
@@ -180,14 +203,16 @@
 				<div class="flex items-center gap-2">
 					{#if $user}
 						<DropdownMenu>
-							<DropdownMenuTrigger asChild let:builder>
-								<Button builders={[builder]} variant="ghost" size="sm" class="h-8 w-8 rounded-full">
-									<Avatar class="h-8 w-8">
-										<AvatarFallback class="text-xs">
-											{$user.firstName.charAt(0)}{$user.lastName.charAt(0)}
-										</AvatarFallback>
-									</Avatar>
-								</Button>
+							<DropdownMenuTrigger>
+								{#snippet child({ props })}
+									<Button {...props} variant="ghost" size="sm" class="h-8 w-8 rounded-full">
+										<Avatar class="h-8 w-8">
+											<AvatarFallback class="text-xs">
+												{$user.firstName.charAt(0)}{$user.lastName.charAt(0)}
+											</AvatarFallback>
+										</Avatar>
+									</Button>
+								{/snippet}
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end" class="w-56">
 								<div class="flex items-center justify-start gap-2 p-2">

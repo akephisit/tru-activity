@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { mutation, query } from '@apollo/client';
+	import { client } from '$lib/graphql/client';
 	import { REGISTER_MUTATION } from '$lib/graphql/mutations';
 	import { GET_FACULTIES } from '$lib/graphql/queries';
 	import { authStore } from '$lib/stores/auth';
@@ -8,7 +8,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
 
 	let studentID = $state('');
@@ -20,16 +20,37 @@
 	let selectedFaculty = $state<string | null>(null);
 	let selectedDepartment = $state<string | null>(null);
 	let isLoading = $state(false);
+	let faculties = $state<any[]>([]);
+	let facultiesLoading = $state(true);
 
-	const register = mutation(REGISTER_MUTATION);
-	const facultiesQuery = query(GET_FACULTIES);
-
-	$: faculties = $facultiesQuery.data?.faculties || [];
-	$: departments = selectedFaculty 
+	const departments = $derived(selectedFaculty 
 		? faculties.find(f => f.id === selectedFaculty)?.departments || []
-		: [];
+		: []);
 
-	async function handleRegister() {
+	// Load faculties on component mount
+	$effect(() => {
+		loadFaculties();
+	});
+
+	async function loadFaculties() {
+		try {
+			facultiesLoading = true;
+			const result = await client.query({
+				query: GET_FACULTIES
+			});
+			if (result.data?.faculties) {
+				faculties = result.data.faculties;
+			}
+		} catch (error) {
+			console.error('Failed to load faculties:', error);
+			toast.error('ไม่สามารถโหลดข้อมูลคณะได้');
+		} finally {
+			facultiesLoading = false;
+		}
+	}
+
+	async function handleRegister(event: Event) {
+		event.preventDefault();
 		if (!studentID || !email || !firstName || !lastName || !password) {
 			toast.error('กรุณากรอกข้อมูลให้ครบถ้วน');
 			return;
@@ -48,7 +69,8 @@
 		isLoading = true;
 		
 		try {
-			const result = await register({
+			const result = await client.mutate({
+				mutation: REGISTER_MUTATION,
 				variables: {
 					input: {
 						studentID,
@@ -94,7 +116,7 @@
 				<CardDescription>กรุณากรอกข้อมูลของคุณเพื่อสมัครสมาชิก</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<form onsubmit|preventDefault={handleRegister} class="space-y-4">
+				<form onsubmit={handleRegister} class="space-y-4">
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<Label for="firstName">ชื่อ</Label>
@@ -144,15 +166,13 @@
 					{#if faculties.length > 0}
 						<div>
 							<Label for="faculty">คณะ</Label>
-							<Select onValueChange={(value) => {
-								selectedFaculty = value;
+							<Select type="single" onValueChange={(value: string | string[]) => {
+								const val = Array.isArray(value) ? value[0] : value;
+								selectedFaculty = val || null;
 								selectedDepartment = null;
 							}}>
 								<SelectTrigger>
-									{selectedFaculty 
-										? faculties.find(f => f.id === selectedFaculty)?.name 
-										: 'เลือกคณะ'
-									}
+									<SelectValue placeholder="เลือกคณะ" />
 								</SelectTrigger>
 								<SelectContent>
 									{#each faculties as faculty}
@@ -165,12 +185,12 @@
 						{#if departments.length > 0}
 							<div>
 								<Label for="department">ภาควิชา</Label>
-								<Select onValueChange={(value) => selectedDepartment = value}>
+								<Select type="single" onValueChange={(value: string | string[]) => {
+									const val = Array.isArray(value) ? value[0] : value;
+									selectedDepartment = val || null;
+								}}>
 									<SelectTrigger>
-										{selectedDepartment 
-											? departments.find(d => d.id === selectedDepartment)?.name 
-											: 'เลือกภาควิชา'
-										}
+										<SelectValue placeholder="เลือกภาควิชา" />
 									</SelectTrigger>
 									<SelectContent>
 										{#each departments as department}
@@ -214,7 +234,7 @@
 				<div class="mt-6">
 					<div class="relative">
 						<div class="absolute inset-0 flex items-center">
-							<div class="w-full border-t border-gray-300" />
+							<div class="w-full border-t border-gray-300"></div>
 						</div>
 						<div class="relative flex justify-center text-sm">
 							<span class="px-2 bg-white text-gray-500">หรือ</span>

@@ -192,7 +192,7 @@
         color: 'text-gray-600'
       }
     };
-    return statusConfig[status] || statusConfig['PENDING'];
+    return statusConfig[status as keyof typeof statusConfig] || statusConfig['PENDING'];
   }
 
   function formatDate(dateString: string) {
@@ -286,7 +286,7 @@
       <h1 class="text-3xl font-bold">กิจกรรมของฉัน</h1>
       <p class="text-muted-foreground">ประวัติการเข้าร่วมกิจกรรมทั้งหมด</p>
     </div>
-    <Button variant="outline" on:click={exportToCSV} disabled={participations.length === 0}>
+    <Button variant="outline" onclick={exportToCSV} disabled={participations.length === 0}>
       <Download class="w-4 h-4 mr-2" />
       Export CSV
     </Button>
@@ -365,7 +365,7 @@
           </div>
         </div>
         <div class="flex gap-2">
-          <Select bind:value={statusFilter}>
+          <Select type="single" onValueChange={(value: string | string[]) => statusFilter = Array.isArray(value) ? value[0] : value}>
             <SelectTrigger class="w-40">
               <SelectValue placeholder="กรองสถานะ" />
             </SelectTrigger>
@@ -378,7 +378,7 @@
               <SelectItem value="ABSENT">ไม่เข้าร่วม</SelectItem>
             </SelectContent>
           </Select>
-          <Select bind:value={sortBy}>
+          <Select type="single" onValueChange={(value: string | string[]) => sortBy = Array.isArray(value) ? value[0] : value}>
             <SelectTrigger class="w-40">
               <SelectValue placeholder="เรียงตาม" />
             </SelectTrigger>
@@ -478,7 +478,7 @@
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      on:click={() => cancelParticipation(participation.id)}
+                      onclick={() => cancelParticipation(participation.id)}
                     >
                       ยกเลิก
                     </Button>

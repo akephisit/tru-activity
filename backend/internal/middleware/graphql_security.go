@@ -4,15 +4,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/redis/go-redis/v9"
 	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 const (
@@ -79,7 +78,9 @@ func (s *SecurityMiddleware) InterceptOperation(ctx context.Context, next graphq
 		// 5. Log security event
 		s.logSecurityEvent(ctx, oc, "operation_started")
 		
-		return next(ctx)
+		// Call next handler and return its response
+		handler := next(ctx)
+		return handler(ctx)
 	}
 }
 
@@ -520,8 +521,17 @@ func (s *SecurityMiddleware) InterceptResponse(ctx context.Context, next graphql
 	
 	// Filter sensitive data based on user permissions
 	if resp.Data != nil {
-		filteredData := s.filterResponseData(ctx, resp.Data)
-		resp.Data = filteredData
+		// Unmarshal the JSON data first
+		var dataInterface interface{}
+		if err := json.Unmarshal(resp.Data, &dataInterface); err == nil {
+			// Apply filtering
+			filteredData := s.filterResponseData(ctx, dataInterface)
+			// Convert filtered data back to json.RawMessage
+			if filteredBytes, err := json.Marshal(filteredData); err == nil {
+				resp.Data = filteredBytes
+			}
+		}
+		// If any step fails, keep original data
 	}
 	
 	return resp

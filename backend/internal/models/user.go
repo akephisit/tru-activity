@@ -154,3 +154,6 @@ func (u *User) HasHigherRoleThan(otherUser *User) bool {
 	
 	return currentLevel > otherLevel
 }
+
+// IsSubscriptionData implements the GraphQL union interface
+func (u *User) IsSubscriptionData() {}

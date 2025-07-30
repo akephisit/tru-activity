@@ -180,7 +180,7 @@
 <div class="container mx-auto py-6 space-y-6">
   <div class="flex items-center justify-between">
     <h1 class="text-3xl font-bold">Super Admin Dashboard</h1>
-    <Button on:click={loadDashboardData} disabled={loading}>
+    <Button onclick={loadDashboardData} disabled={loading}>
       {loading ? 'Loading...' : 'Refresh'}
     </Button>
   </div>

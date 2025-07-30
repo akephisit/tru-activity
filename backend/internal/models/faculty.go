@@ -42,3 +42,9 @@ type Department struct {
 func (Department) TableName() string {
 	return "departments"
 }
+
+// IsSubscriptionData implements the GraphQL union interface for Faculty
+func (f *Faculty) IsSubscriptionData() {}
+
+// IsSubscriptionData implements the GraphQL union interface for Department
+func (d *Department) IsSubscriptionData() {}

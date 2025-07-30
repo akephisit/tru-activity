@@ -594,7 +594,7 @@ func convertToGraphQLPayload(payload *services.SubscriptionPayload) *model.Subsc
 	return &model.SubscriptionPayload{
 		Type:      payload.Type,
 		Timestamp: payload.Timestamp,
-		Data:      payload.Data, // This would need proper type conversion
+		Data:      nil, // This would need proper type conversion based on payload type
 		Metadata: &model.SubscriptionMetadata{
 			Source: getStringFromMap(payload.Metadata, "source"),
 		},

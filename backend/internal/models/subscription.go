@@ -82,3 +82,6 @@ func (s *Subscription) GetNotificationType() string {
 	
 	return ""
 }
+
+// IsSubscriptionData implements the GraphQL union interface for Subscription
+func (s *Subscription) IsSubscriptionData() {}

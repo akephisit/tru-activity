@@ -133,18 +133,18 @@ export const isAuthenticated: Readable<boolean> = {
 
 export const isAdmin: Readable<boolean> = {
   subscribe: (run) => authStore.subscribe(state => 
-    run(state.user?.role !== 'STUDENT' ?? false)
+    run(state.user?.role !== 'STUDENT' || false)
   )
 };
 
 export const isSuperAdmin: Readable<boolean> = {
   subscribe: (run) => authStore.subscribe(state => 
-    run(state.user?.role === 'SUPER_ADMIN' ?? false)
+    run(state.user?.role === 'SUPER_ADMIN' || false)
   )
 };
 
 export const isFacultyAdmin: Readable<boolean> = {
   subscribe: (run) => authStore.subscribe(state => 
-    run(state.user?.role === 'FACULTY_ADMIN' ?? false)
+    run(state.user?.role === 'FACULTY_ADMIN' || false)
   )
 };

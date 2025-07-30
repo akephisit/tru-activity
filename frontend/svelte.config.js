@@ -8,12 +8,12 @@ const config = {
   preprocess: vitePreprocess(),
 
   kit: {
-    // Static adapter for Firebase Hosting
+    // Static adapter for Cloud Run deployment
     adapter: adapter({
       pages: 'build',
       assets: 'build',
       fallback: 'index.html',
-      precompress: true,
+      precompress: false, // nginx handles compression
       strict: true
     }),
     alias: {

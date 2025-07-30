@@ -19,9 +19,11 @@ type CacheManager struct {
 
 // CacheConfig defines caching configuration for different types
 type CacheConfig struct {
-	KeyPrefix string
-	TTL       time.Duration
-	Tags      []string
+	KeyPrefix   string
+	TTL         time.Duration
+	Tags        []string
+	MaxSize     int
+	EnableRedis bool
 }
 
 // Cache configurations for different entity types

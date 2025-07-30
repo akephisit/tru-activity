@@ -214,11 +214,13 @@
   <div class="flex items-center justify-between">
     <h1 class="text-3xl font-bold">Faculty Management</h1>
     <Dialog bind:open={showCreateDialog}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus size={16} class="mr-2" />
-          Add Faculty
-        </Button>
+      <DialogTrigger>
+        {#snippet child({ props })}
+          <Button {...props}>
+            <Plus size={16} class="mr-2" />
+            Add Faculty
+          </Button>
+        {/snippet}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -246,14 +248,14 @@
           <div>
             <Label for="description">Description</Label>
             <Textarea
-              id="description"
               bind:value={formData.description}
               placeholder="Enter faculty description"
               rows={3}
+              {...{ id: "description" }}
             />
           </div>
           <div class="flex justify-end gap-2">
-            <Button variant="outline" type="button" on:click={() => showCreateDialog = false}>
+            <Button variant="outline" type="button" onclick={() => showCreateDialog = false}>
               Cancel
             </Button>
             <Button type="submit">Create Faculty</Button>
@@ -302,10 +304,10 @@
                 </div>
               </div>
               <div class="flex gap-2">
-                <Button variant="outline" size="sm" on:click={() => openEditDialog(faculty)}>
+                <Button variant="outline" size="sm" onclick={() => openEditDialog(faculty)}>
                   <Edit2 size={16} />
                 </Button>
-                <Button variant="outline" size="sm" on:click={() => deleteFaculty(faculty)}>
+                <Button variant="outline" size="sm" onclick={() => deleteFaculty(faculty)}>
                   <Trash2 size={16} class="text-red-600" />
                 </Button>
               </div>
@@ -377,14 +379,14 @@
         <div>
           <Label for="edit-description">Description</Label>
           <Textarea
-            id="edit-description"
             bind:value={formData.description}
             placeholder="Enter faculty description"
             rows={3}
+            {...{ id: "edit-description" }}
           />
         </div>
         <div class="flex justify-end gap-2">
-          <Button variant="outline" type="button" on:click={() => showEditDialog = false}>
+          <Button variant="outline" type="button" onclick={() => showEditDialog = false}>
             Cancel
           </Button>
           <Button type="submit">Update Faculty</Button>

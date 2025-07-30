@@ -60,7 +60,7 @@
   let cameraStream: MediaStream | null = null;
   let videoElement: HTMLVideoElement;
   let canvasElement: HTMLCanvasElement;
-  let scanInterval: number;
+  let scanInterval: ReturnType<typeof setInterval>;
 
   // Camera scanning variables
   let cameraActive = false;
@@ -282,7 +282,7 @@
       <CardContent class="space-y-3">
         <div>
           <Label for="activity">Activity</Label>
-          <Select bind:value={selectedActivityId}>
+          <Select type="single" onValueChange={(value: string | string[]) => selectedActivityId = Array.isArray(value) ? value[0] : value}>
             <SelectTrigger>
               <SelectValue placeholder="Choose an activity to scan for" />
             </SelectTrigger>
@@ -334,7 +334,7 @@
             <Button 
               variant="outline" 
               size="sm" 
-              on:click={cameraActive ? stopCamera : startCamera}
+              onclick={cameraActive ? stopCamera : startCamera}
             >
               <Camera size={16} class="mr-2" />
               {cameraActive ? 'Stop' : 'Start'} Camera
@@ -388,7 +388,7 @@
         </div>
         
         <Button 
-          on:click={() => scanQRCode()} 
+          onclick={() => scanQRCode()} 
           disabled={scanning || !selectedActivityId || !qrInput.trim()}
           class="w-full"
         >
@@ -447,7 +447,7 @@
             </div>
           {/if}
 
-          <Button variant="outline" size="sm" on:click={clearResult} class="w-full">
+          <Button variant="outline" size="sm" onclick={clearResult} class="w-full">
             Scan Next
           </Button>
         </CardContent>

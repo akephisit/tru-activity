@@ -3,49 +3,59 @@
 package model
 
 import (
-	"fmt"
-	"io"
-	"strconv"
 	"time"
+
+	"github.com/kruakemaths/tru-activity/backend/internal/models"
 )
 
-type Activity struct {
-	ID              string             `json:"id"`
-	Title           string             `json:"title"`
-	Description     *string            `json:"description"`
-	Type            ActivityType       `json:"type"`
-	Status          ActivityStatus     `json:"status"`
-	StartDate       time.Time          `json:"startDate"`
-	EndDate         time.Time          `json:"endDate"`
-	Location        *string            `json:"location"`
-	MaxParticipants *int               `json:"maxParticipants"`
-	RequireApproval bool               `json:"requireApproval"`
-	Points          int                `json:"points"`
-	Faculty         *Faculty           `json:"faculty"`
-	Department      *Department        `json:"department"`
-	CreatedBy       *User              `json:"createdBy"`
-	CreatedAt       time.Time          `json:"createdAt"`
-	UpdatedAt       time.Time          `json:"updatedAt"`
-	Participations  []*Participation   `json:"participations"`
+type SubscriptionData interface {
+	IsSubscriptionData()
 }
 
 type AuthPayload struct {
-	Token string `json:"token"`
-	User  *User  `json:"user"`
+	Token string       `json:"token"`
+	User  *models.User `json:"user"`
+}
+
+type CreateActivityAssignmentInput struct {
+	ActivityID string  `json:"activityID"`
+	AdminID    string  `json:"adminID"`
+	CanScanQR  *bool   `json:"canScanQR,omitempty"`
+	CanApprove *bool   `json:"canApprove,omitempty"`
+	Notes      *string `json:"notes,omitempty"`
 }
 
 type CreateActivityInput struct {
-	Title           string        `json:"title"`
-	Description     *string       `json:"description"`
-	Type            ActivityType  `json:"type"`
-	StartDate       time.Time     `json:"startDate"`
-	EndDate         time.Time     `json:"endDate"`
-	Location        *string       `json:"location"`
-	MaxParticipants *int          `json:"maxParticipants"`
-	RequireApproval bool          `json:"requireApproval"`
-	Points          int           `json:"points"`
-	FacultyID       *string       `json:"facultyID"`
-	DepartmentID    *string       `json:"departmentID"`
+	Title           string              `json:"title"`
+	Description     *string             `json:"description,omitempty"`
+	Type            models.ActivityType `json:"type"`
+	StartDate       time.Time           `json:"startDate"`
+	EndDate         time.Time           `json:"endDate"`
+	Location        *string             `json:"location,omitempty"`
+	MaxParticipants *int                `json:"maxParticipants,omitempty"`
+	RequireApproval bool                `json:"requireApproval"`
+	Points          int                 `json:"points"`
+	FacultyID       *string             `json:"facultyID,omitempty"`
+	DepartmentID    *string             `json:"departmentID,omitempty"`
+	TemplateID      *string             `json:"templateID,omitempty"`
+	IsRecurring     *bool               `json:"isRecurring,omitempty"`
+	RecurrenceRule  *string             `json:"recurrenceRule,omitempty"`
+	QRCodeRequired  *bool               `json:"qrCodeRequired,omitempty"`
+	AutoApprove     *bool               `json:"autoApprove,omitempty"`
+}
+
+type CreateActivityTemplateInput struct {
+	Name            string              `json:"name"`
+	Description     *string             `json:"description,omitempty"`
+	Type            models.ActivityType `json:"type"`
+	DefaultDuration int                 `json:"defaultDuration"`
+	Location        *string             `json:"location,omitempty"`
+	MaxParticipants *int                `json:"maxParticipants,omitempty"`
+	RequireApproval bool                `json:"requireApproval"`
+	Points          int                 `json:"points"`
+	QRCodeRequired  *bool               `json:"qrCodeRequired,omitempty"`
+	AutoApprove     *bool               `json:"autoApprove,omitempty"`
+	FacultyID       *string             `json:"facultyID,omitempty"`
 }
 
 type CreateDepartmentInput struct {
@@ -57,50 +67,62 @@ type CreateDepartmentInput struct {
 type CreateFacultyInput struct {
 	Name        string  `json:"name"`
 	Code        string  `json:"code"`
-	Description *string `json:"description"`
+	Description *string `json:"description,omitempty"`
 }
 
-type Department struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	Code        string      `json:"code"`
-	Faculty     *Faculty    `json:"faculty"`
-	IsActive    bool        `json:"isActive"`
-	CreatedAt   time.Time   `json:"createdAt"`
-	UpdatedAt   time.Time   `json:"updatedAt"`
-	Users       []*User     `json:"users"`
-	Activities  []*Activity `json:"activities"`
+type CreateSubscriptionInput struct {
+	FacultyID string                  `json:"facultyID"`
+	Type      models.SubscriptionType `json:"type"`
+	StartDate time.Time               `json:"startDate"`
+	EndDate   time.Time               `json:"endDate"`
 }
 
-type Faculty struct {
-	ID           string        `json:"id"`
-	Name         string        `json:"name"`
-	Code         string        `json:"code"`
-	Description  *string       `json:"description"`
-	IsActive     bool          `json:"isActive"`
-	CreatedAt    time.Time     `json:"createdAt"`
-	UpdatedAt    time.Time     `json:"updatedAt"`
-	Departments  []*Department `json:"departments"`
-	Users        []*User       `json:"users"`
-	Activities   []*Activity   `json:"activities"`
+type FacultySubscription struct {
+	ID                string                    `json:"id"`
+	Faculty           *models.Faculty           `json:"faculty"`
+	Type              models.SubscriptionType   `json:"type"`
+	Status            models.SubscriptionStatus `json:"status"`
+	StartDate         time.Time                 `json:"startDate"`
+	EndDate           time.Time                 `json:"endDate"`
+	DaysUntilExpiry   int                       `json:"daysUntilExpiry"`
+	NeedsNotification bool                      `json:"needsNotification"`
+	CreatedAt         time.Time                 `json:"createdAt"`
+	UpdatedAt         time.Time                 `json:"updatedAt"`
 }
+
+func (FacultySubscription) IsSubscriptionData() {}
 
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-type Participation struct {
-	ID           string               `json:"id"`
-	User         *User                `json:"user"`
-	Activity     *Activity            `json:"activity"`
-	Status       ParticipationStatus  `json:"status"`
-	RegisteredAt time.Time            `json:"registeredAt"`
-	ApprovedAt   *time.Time           `json:"approvedAt"`
-	AttendedAt   *time.Time           `json:"attendedAt"`
-	Notes        *string              `json:"notes"`
-	CreatedAt    time.Time            `json:"createdAt"`
-	UpdatedAt    time.Time            `json:"updatedAt"`
+type Mutation struct {
+}
+
+type QRData struct {
+	StudentID string `json:"studentID"`
+	Timestamp string `json:"timestamp"`
+	Signature string `json:"signature"`
+	Version   int    `json:"version"`
+	QRString  string `json:"qrString"`
+}
+
+type QRScanInput struct {
+	QRData       string  `json:"qrData"`
+	ActivityID   string  `json:"activityID"`
+	ScanLocation *string `json:"scanLocation,omitempty"`
+}
+
+type QRScanResult struct {
+	Success       bool                  `json:"success"`
+	Message       string                `json:"message"`
+	Participation *models.Participation `json:"participation,omitempty"`
+	User          *models.User          `json:"user,omitempty"`
+	ScanLog       *models.QRScanLog     `json:"scanLog,omitempty"`
+}
+
+type Query struct {
 }
 
 type RegisterInput struct {
@@ -109,320 +131,77 @@ type RegisterInput struct {
 	FirstName    string  `json:"firstName"`
 	LastName     string  `json:"lastName"`
 	Password     string  `json:"password"`
-	FacultyID    *string `json:"facultyID"`
-	DepartmentID *string `json:"departmentID"`
+	FacultyID    *string `json:"facultyID,omitempty"`
+	DepartmentID *string `json:"departmentID,omitempty"`
 }
 
-type Subscription struct {
-	ID         string             `json:"id"`
-	User       *User              `json:"user"`
-	Type       SubscriptionType   `json:"type"`
-	Status     SubscriptionStatus `json:"status"`
-	StartDate  time.Time          `json:"startDate"`
-	EndDate    time.Time          `json:"endDate"`
-	CreatedAt  time.Time          `json:"createdAt"`
-	UpdatedAt  time.Time          `json:"updatedAt"`
+type SubscriptionFilter struct {
+	FacultyID  *string  `json:"facultyID,omitempty"`
+	ActivityID *string  `json:"activityID,omitempty"`
+	UserID     *string  `json:"userID,omitempty"`
+	Types      []string `json:"types,omitempty"`
+}
+
+type SubscriptionMetadata struct {
+	Source       *string `json:"source,omitempty"`
+	UserID       *string `json:"userID,omitempty"`
+	FacultyID    *string `json:"facultyID,omitempty"`
+	ActivityID   *string `json:"activityID,omitempty"`
+	ConnectionID *string `json:"connectionID,omitempty"`
+}
+
+type SubscriptionPayload struct {
+	Type      string                `json:"type"`
+	Timestamp time.Time             `json:"timestamp"`
+	Data      SubscriptionData      `json:"data,omitempty"`
+	Metadata  *SubscriptionMetadata `json:"metadata,omitempty"`
+}
+
+type UpdateActivityAssignmentInput struct {
+	CanScanQR  *bool   `json:"canScanQR,omitempty"`
+	CanApprove *bool   `json:"canApprove,omitempty"`
+	Notes      *string `json:"notes,omitempty"`
 }
 
 type UpdateActivityInput struct {
-	Title           *string         `json:"title"`
-	Description     *string         `json:"description"`
-	Type            *ActivityType   `json:"type"`
-	Status          *ActivityStatus `json:"status"`
-	StartDate       *time.Time      `json:"startDate"`
-	EndDate         *time.Time      `json:"endDate"`
-	Location        *string         `json:"location"`
-	MaxParticipants *int            `json:"maxParticipants"`
-	RequireApproval *bool           `json:"requireApproval"`
-	Points          *int            `json:"points"`
-	FacultyID       *string         `json:"facultyID"`
-	DepartmentID    *string         `json:"departmentID"`
+	Title           *string                `json:"title,omitempty"`
+	Description     *string                `json:"description,omitempty"`
+	Type            *models.ActivityType   `json:"type,omitempty"`
+	Status          *models.ActivityStatus `json:"status,omitempty"`
+	StartDate       *time.Time             `json:"startDate,omitempty"`
+	EndDate         *time.Time             `json:"endDate,omitempty"`
+	Location        *string                `json:"location,omitempty"`
+	MaxParticipants *int                   `json:"maxParticipants,omitempty"`
+	RequireApproval *bool                  `json:"requireApproval,omitempty"`
+	Points          *int                   `json:"points,omitempty"`
+	FacultyID       *string                `json:"facultyID,omitempty"`
+	DepartmentID    *string                `json:"departmentID,omitempty"`
+	QRCodeRequired  *bool                  `json:"qrCodeRequired,omitempty"`
+	AutoApprove     *bool                  `json:"autoApprove,omitempty"`
 }
 
-type User struct {
-	ID             string          `json:"id"`
-	StudentID      string          `json:"studentID"`
-	Email          string          `json:"email"`
-	FirstName      string          `json:"firstName"`
-	LastName       string          `json:"lastName"`
-	Role           UserRole        `json:"role"`
-	QrSecret       string          `json:"qrSecret"`
-	Faculty        *Faculty        `json:"faculty"`
-	Department     *Department     `json:"department"`
-	IsActive       bool            `json:"isActive"`
-	LastLoginAt    *time.Time      `json:"lastLoginAt"`
-	CreatedAt      time.Time       `json:"createdAt"`
-	UpdatedAt      time.Time       `json:"updatedAt"`
-	Participations []*Participation `json:"participations"`
-	Subscriptions  []*Subscription `json:"subscriptions"`
+type UpdateActivityTemplateInput struct {
+	Name            *string              `json:"name,omitempty"`
+	Description     *string              `json:"description,omitempty"`
+	Type            *models.ActivityType `json:"type,omitempty"`
+	DefaultDuration *int                 `json:"defaultDuration,omitempty"`
+	Location        *string              `json:"location,omitempty"`
+	MaxParticipants *int                 `json:"maxParticipants,omitempty"`
+	RequireApproval *bool                `json:"requireApproval,omitempty"`
+	Points          *int                 `json:"points,omitempty"`
+	QRCodeRequired  *bool                `json:"qrCodeRequired,omitempty"`
+	AutoApprove     *bool                `json:"autoApprove,omitempty"`
+	IsActive        *bool                `json:"isActive,omitempty"`
 }
 
-type ActivityStatus string
-
-const (
-	ActivityStatusDraft     ActivityStatus = "DRAFT"
-	ActivityStatusActive    ActivityStatus = "ACTIVE"
-	ActivityStatusCompleted ActivityStatus = "COMPLETED"
-	ActivityStatusCancelled ActivityStatus = "CANCELLED"
-)
-
-var AllActivityStatus = []ActivityStatus{
-	ActivityStatusDraft,
-	ActivityStatusActive,
-	ActivityStatusCompleted,
-	ActivityStatusCancelled,
+type UpdateDepartmentInput struct {
+	Name *string `json:"name,omitempty"`
+	Code *string `json:"code,omitempty"`
 }
 
-func (e ActivityStatus) IsValid() bool {
-	switch e {
-	case ActivityStatusDraft, ActivityStatusActive, ActivityStatusCompleted, ActivityStatusCancelled:
-		return true
-	}
-	return false
-}
-
-func (e ActivityStatus) String() string {
-	return string(e)
-}
-
-func (e *ActivityStatus) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = ActivityStatus(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ActivityStatus", str)
-	}
-	return nil
-}
-
-func (e ActivityStatus) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-type ActivityType string
-
-const (
-	ActivityTypeWorkshop    ActivityType = "WORKSHOP"
-	ActivityTypeSeminar     ActivityType = "SEMINAR"
-	ActivityTypeCompetition ActivityType = "COMPETITION"
-	ActivityTypeVolunteer   ActivityType = "VOLUNTEER"
-	ActivityTypeOther       ActivityType = "OTHER"
-)
-
-var AllActivityType = []ActivityType{
-	ActivityTypeWorkshop,
-	ActivityTypeSeminar,
-	ActivityTypeCompetition,
-	ActivityTypeVolunteer,
-	ActivityTypeOther,
-}
-
-func (e ActivityType) IsValid() bool {
-	switch e {
-	case ActivityTypeWorkshop, ActivityTypeSeminar, ActivityTypeCompetition, ActivityTypeVolunteer, ActivityTypeOther:
-		return true
-	}
-	return false
-}
-
-func (e ActivityType) String() string {
-	return string(e)
-}
-
-func (e *ActivityType) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = ActivityType(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ActivityType", str)
-	}
-	return nil
-}
-
-func (e ActivityType) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-type ParticipationStatus string
-
-const (
-	ParticipationStatusPending  ParticipationStatus = "PENDING"
-	ParticipationStatusApproved ParticipationStatus = "APPROVED"
-	ParticipationStatusRejected ParticipationStatus = "REJECTED"
-	ParticipationStatusAttended ParticipationStatus = "ATTENDED"
-	ParticipationStatusAbsent   ParticipationStatus = "ABSENT"
-)
-
-var AllParticipationStatus = []ParticipationStatus{
-	ParticipationStatusPending,
-	ParticipationStatusApproved,
-	ParticipationStatusRejected,
-	ParticipationStatusAttended,
-	ParticipationStatusAbsent,
-}
-
-func (e ParticipationStatus) IsValid() bool {
-	switch e {
-	case ParticipationStatusPending, ParticipationStatusApproved, ParticipationStatusRejected, ParticipationStatusAttended, ParticipationStatusAbsent:
-		return true
-	}
-	return false
-}
-
-func (e ParticipationStatus) String() string {
-	return string(e)
-}
-
-func (e *ParticipationStatus) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = ParticipationStatus(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ParticipationStatus", str)
-	}
-	return nil
-}
-
-func (e ParticipationStatus) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-type SubscriptionStatus string
-
-const (
-	SubscriptionStatusActive    SubscriptionStatus = "ACTIVE"
-	SubscriptionStatusExpired   SubscriptionStatus = "EXPIRED"
-	SubscriptionStatusCancelled SubscriptionStatus = "CANCELLED"
-)
-
-var AllSubscriptionStatus = []SubscriptionStatus{
-	SubscriptionStatusActive,
-	SubscriptionStatusExpired,
-	SubscriptionStatusCancelled,
-}
-
-func (e SubscriptionStatus) IsValid() bool {
-	switch e {
-	case SubscriptionStatusActive, SubscriptionStatusExpired, SubscriptionStatusCancelled:
-		return true
-	}
-	return false
-}
-
-func (e SubscriptionStatus) String() string {
-	return string(e)
-}
-
-func (e *SubscriptionStatus) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = SubscriptionStatus(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid SubscriptionStatus", str)
-	}
-	return nil
-}
-
-func (e SubscriptionStatus) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-type SubscriptionType string
-
-const (
-	SubscriptionTypeBasic   SubscriptionType = "BASIC"
-	SubscriptionTypePremium SubscriptionType = "PREMIUM"
-	SubscriptionTypeVip     SubscriptionType = "VIP"
-)
-
-var AllSubscriptionType = []SubscriptionType{
-	SubscriptionTypeBasic,
-	SubscriptionTypePremium,
-	SubscriptionTypeVip,
-}
-
-func (e SubscriptionType) IsValid() bool {
-	switch e {
-	case SubscriptionTypeBasic, SubscriptionTypePremium, SubscriptionTypeVip:
-		return true
-	}
-	return false
-}
-
-func (e SubscriptionType) String() string {
-	return string(e)
-}
-
-func (e *SubscriptionType) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = SubscriptionType(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid SubscriptionType", str)
-	}
-	return nil
-}
-
-func (e SubscriptionType) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-type UserRole string
-
-const (
-	UserRoleStudent      UserRole = "STUDENT"
-	UserRoleSuperAdmin   UserRole = "SUPER_ADMIN"
-	UserRoleFacultyAdmin UserRole = "FACULTY_ADMIN"
-	UserRoleRegularAdmin UserRole = "REGULAR_ADMIN"
-)
-
-var AllUserRole = []UserRole{
-	UserRoleStudent,
-	UserRoleSuperAdmin,
-	UserRoleFacultyAdmin,
-	UserRoleRegularAdmin,
-}
-
-func (e UserRole) IsValid() bool {
-	switch e {
-	case UserRoleStudent, UserRoleSuperAdmin, UserRoleFacultyAdmin, UserRoleRegularAdmin:
-		return true
-	}
-	return false
-}
-
-func (e UserRole) String() string {
-	return string(e)
-}
-
-func (e *UserRole) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = UserRole(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid UserRole", str)
-	}
-	return nil
-}
-
-func (e UserRole) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
+type UpdateSubscriptionInput struct {
+	Type      *models.SubscriptionType   `json:"type,omitempty"`
+	StartDate *time.Time                 `json:"startDate,omitempty"`
+	EndDate   *time.Time                 `json:"endDate,omitempty"`
+	Status    *models.SubscriptionStatus `json:"status,omitempty"`
 }

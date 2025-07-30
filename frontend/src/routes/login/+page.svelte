@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { mutation } from '@apollo/client';
+	import { client } from '$lib/graphql/client';
 	import { LOGIN_MUTATION } from '$lib/graphql/mutations';
 	import { authStore } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -13,9 +13,8 @@
 	let password = $state('');
 	let isLoading = $state(false);
 
-	const login = mutation(LOGIN_MUTATION);
-
-	async function handleLogin() {
+	async function handleLogin(event: Event) {
+		event.preventDefault();
 		if (!email || !password) {
 			toast.error('กรุณากรอกอีเมลและรหัสผ่าน');
 			return;
@@ -24,7 +23,8 @@
 		isLoading = true;
 		
 		try {
-			const result = await login({
+			const result = await client.mutate({
+				mutation: LOGIN_MUTATION,
 				variables: {
 					input: {
 						email,
@@ -65,7 +65,7 @@
 				<CardDescription>กรุณากรอกข้อมูลของคุณเพื่อเข้าสู่ระบบ</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<form onsubmit|preventDefault={handleLogin} class="space-y-6">
+				<form onsubmit={handleLogin} class="space-y-6">
 					<div>
 						<Label for="email">อีเมล</Label>
 						<Input
@@ -98,7 +98,7 @@
 				<div class="mt-6">
 					<div class="relative">
 						<div class="absolute inset-0 flex items-center">
-							<div class="w-full border-t border-gray-300" />
+							<div class="w-full border-t border-gray-300"></div>
 						</div>
 						<div class="relative flex justify-center text-sm">
 							<span class="px-2 bg-white text-gray-500">หรือ</span>

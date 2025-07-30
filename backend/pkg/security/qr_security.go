@@ -8,12 +8,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
+	"context"
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/scrypt"
-	"context"
 )
 
 const (

@@ -15,7 +15,6 @@ type Config struct {
 	JWTExpireHours int
 	Port           string
 	Environment    string
-	CORSOrigins    string
 }
 
 func Load() *Config {
@@ -26,13 +25,12 @@ func Load() *Config {
 	jwtExpireHours, _ := strconv.Atoi(getEnv("JWT_EXPIRE_HOURS", "24"))
 
 	return &Config{
-		DatabaseURL: buildDatabaseURL(),
-		RedisURL:    buildRedisURL(),
-		JWTSecret:   getEnv("JWT_SECRET", "default-secret-key"),
+		DatabaseURL:    buildDatabaseURL(),
+		RedisURL:       buildRedisURL(),
+		JWTSecret:      getEnv("JWT_SECRET", "default-secret-key"),
 		JWTExpireHours: jwtExpireHours,
-		Port:        getEnv("PORT", "8080"),
-		Environment: getEnv("ENV", "development"),
-		CORSOrigins: getEnv("CORS_ORIGINS", "http://localhost:5173"),
+		Port:           getEnv("PORT", "8080"),
+		Environment:    getEnv("ENV", "development"),
 	}
 }
 
@@ -51,7 +49,7 @@ func buildRedisURL() string {
 	host := getEnv("REDIS_HOST", "localhost")
 	port := getEnv("REDIS_PORT", "6379")
 	password := getEnv("REDIS_PASSWORD", "")
-	
+
 	if password != "" {
 		return "redis://:" + password + "@" + host + ":" + port
 	}

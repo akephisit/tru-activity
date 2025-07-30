@@ -269,6 +269,7 @@ func (pm *PerformanceMonitor) RecordRedisMetrics(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	_ = info // TODO: Parse Redis info to populate metrics
 	
 	// Parse Redis info (simplified)
 	metrics := RedisMetrics{}
@@ -538,7 +539,12 @@ func (pm *PerformanceMonitor) resolveAlert(ctx context.Context, metricName strin
 	pipe := pm.redisClient.Pipeline()
 	pipe.Del(ctx, "alerts:active")
 	if len(updatedAlerts) > 0 {
-		pipe.LPush(ctx, "alerts:active", updatedAlerts...)
+		// Convert []string to []interface{}
+		interfaceAlerts := make([]interface{}, len(updatedAlerts))
+		for i, alert := range updatedAlerts {
+			interfaceAlerts[i] = alert
+		}
+		pipe.LPush(ctx, "alerts:active", interfaceAlerts...)
 	}
 	pipe.Exec(ctx)
 }
@@ -603,7 +609,12 @@ func (pm *PerformanceMonitor) cleanupOldAlerts(ctx context.Context) {
 	pipe := pm.redisClient.Pipeline()
 	pipe.Del(ctx, "alerts:active")
 	if len(activeAlerts) > 0 {
-		pipe.LPush(ctx, "alerts:active", activeAlerts...)
+		// Convert []string to []interface{}
+		interfaceAlerts := make([]interface{}, len(activeAlerts))
+		for i, alert := range activeAlerts {
+			interfaceAlerts[i] = alert
+		}
+		pipe.LPush(ctx, "alerts:active", interfaceAlerts...)
 	}
 	pipe.Exec(ctx)
 }

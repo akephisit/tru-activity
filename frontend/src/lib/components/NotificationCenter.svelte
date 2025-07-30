@@ -48,7 +48,11 @@
 
     // Subscribe to connection status
     const unsubscribeStatus = client.connectionStatus.subscribe(status => {
-      connectionStatus = status;
+      connectionStatus = {
+        connected: status.connected,
+        connecting: status.connecting,
+        error: null
+      };
     });
 
     // Subscribe to personal notifications
@@ -139,8 +143,8 @@
     }
   }
 
-  function getNotificationTypeColor(type: string): string {
-    const colorMap: Record<string, string> = {
+  function getNotificationTypeColor(type: string): "default" | "secondary" | "destructive" | "outline" {
+    const colorMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       'system_alert': 'destructive',
       'qr_scan_event': 'default',
       'participation_event': 'secondary',
@@ -216,7 +220,7 @@
     <Button 
       variant="outline" 
       size="icon"
-      on:click={toggleNotificationCenter}
+      onclick={toggleNotificationCenter}
       class="relative h-10 w-10 rounded-full shadow-lg {hasUnreadNotifications ? 'ring-2 ring-blue-500 ring-offset-2' : ''}"
     >
       {#if hasUnreadNotifications}
@@ -253,22 +257,22 @@
             <div class="flex items-center gap-2">
               <!-- Connection Status -->
               {#if connectionStatus.connected}
-                <Wifi size={16} class="text-green-600" title="Connected" />
+                <Wifi size={16} class="text-green-600" />
               {:else if connectionStatus.connecting}
-                <WifiOff size={16} class="text-yellow-600 animate-pulse" title="Connecting..." />
+                <WifiOff size={16} class="text-yellow-600 animate-pulse" />
               {:else}
-                <WifiOff size={16} class="text-red-600" title="Disconnected: {connectionStatus.error}" />
+                <WifiOff size={16} class="text-red-600" />
               {/if}
               
               <!-- Clear All Button -->
               {#if notifications.length > 0}
-                <Button variant="ghost" size="sm" on:click={clearAllNotifications}>
+                <Button variant="ghost" size="sm" onclick={clearAllNotifications}>
                   <Trash2 size={14} />
                 </Button>
               {/if}
               
               <!-- Close Button -->
-              <Button variant="ghost" size="sm" on:click={toggleNotificationCenter}>
+              <Button variant="ghost" size="sm" onclick={toggleNotificationCenter}>
                 <X size={16} />
               </Button>
             </div>
@@ -340,7 +344,7 @@
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      on:click={() => removeNotification(notification.id)}
+                      onclick={() => removeNotification(notification.id)}
                       class="opacity-50 hover:opacity-100 p-1 h-6 w-6"
                     >
                       <X size={12} />
@@ -377,7 +381,7 @@
           <Button 
             variant="ghost" 
             size="sm" 
-            on:click={() => removeNotification(notification.id)}
+            onclick={() => removeNotification(notification.id)}
             class="text-red-600 hover:text-red-800 p-1 h-6 w-6"
           >
             <X size={12} />

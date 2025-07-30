@@ -2,8 +2,12 @@ package database
 
 import (
 	"context"
+	"crypto/md5"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -106,7 +110,7 @@ func NewQueryOptimizer(db *gorm.DB, redisClient *redis.Client) *QueryOptimizer {
 func (qo *QueryOptimizer) setupQueryLogger() {
 	customLogger := &QueryLogger{
 		optimizer: qo,
-		Logger:    logger.Default,
+		Interface: logger.Default,
 	}
 	
 	qo.db.Logger = customLogger
@@ -277,7 +281,12 @@ func (qo *QueryOptimizer) OptimizedFind(ctx context.Context, dest interface{}, q
 	case string:
 		err = db.Raw(q, args...).Scan(dest).Error
 	default:
-		err = db.Find(dest, query, args...).Error
+		// For non-string queries, combine query and args
+		if len(args) > 0 {
+			err = db.Find(dest, append([]interface{}{query}, args...)...).Error
+		} else {
+			err = db.Find(dest, query).Error
+		}
 	}
 	
 	duration := time.Since(start)
@@ -626,13 +635,6 @@ func (qo *QueryOptimizer) GetSlowQueries(limit int) []*SlowQuery {
 }
 
 // Helper functions
-
-import (
-	"crypto/md5"
-	"encoding/json"
-	"reflect"
-	"regexp"
-)
 
 func hashQuery(query string) string {
 	// Normalize query by removing values and whitespace
