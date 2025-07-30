@@ -6,12 +6,12 @@
 		ref = $bindable(null),
 		class: className,
 		...restProps
-	}: DialogPrimitive.TitleProps = $props();
+	}: DialogPrimitive.DescriptionProps = $props();
 </script>
 
-<DialogPrimitive.Title
+<DialogPrimitive.Description
 	bind:ref
-	data-slot="dialog-title"
-	class={cn("text-lg font-semibold leading-none", className)}
+	data-slot="dialog-description"
+	class={cn("text-muted-foreground text-sm", className)}
 	{...restProps}
 />
