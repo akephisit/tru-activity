@@ -23,8 +23,8 @@ FROM node:20-alpine AS production
 RUN apk add --no-cache curl
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+RUN addgroup -g 1001 -S svelte && \
+    adduser -S svelte -u 1001
 
 # Set working directory
 WORKDIR /app
@@ -35,8 +35,8 @@ COPY --from=builder /app/node_modules node_modules/
 COPY --from=builder /app/package.json .
 
 # Change ownership to non-root user
-RUN chown -R nextjs:nodejs /app
-USER nextjs
+RUN chown -R svelte:svelte /app
+USER svelte
 
 # Expose port 3000 (SvelteKit default)
 EXPOSE 3000
