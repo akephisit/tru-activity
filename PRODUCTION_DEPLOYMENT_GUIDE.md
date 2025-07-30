@@ -3,18 +3,52 @@
 ## 📖 Overview
 
 คู่มือการ deploy TRU Activity system ไปยัง production environments รองรับ 3 วิธี:
-1. **Google Cloud Platform (แนะนำ)** - Cloud Run + Cloud SQL + Firebase
-2. **Docker + VPS** - สำหรับ self-hosted server
-3. **Kubernetes** - สำหรับ enterprise deployment
+
+### 🏆 **Google Cloud Run (แนะนำ)** 
+- **ไม่ต้องใช้ Nginx** - Google จัดการ Load Balancer + SSL ให้
+- **Serverless** - Auto-scaling, pay per use
+- **เหมาะสำหรับ University** - Traffic ไม่สม่ำเสมอ, budget-friendly
+
+### 🐳 **Docker + VPS**
+- **ต้องใช้ Nginx** - สำหรับ reverse proxy + SSL
+- **Full control** - จัดการ infrastructure เอง
+
+### ☸️ **Kubernetes**
+- **Enterprise deployment** - High availability, complex setup
+
+## 🎯 แนะนำสำหรับ TRU Activity: **Google Cloud Run**
+
+### เหตุผล:
+- ✅ **SSL built-in** - ไม่ต้องจัดการ certificates
+- ✅ **Auto-scaling** - รองรับ peak usage (ช่วงลงทะเบียน)
+- ✅ **Cost-effective** - จ่ายตามการใช้งานจริง
+- ✅ **Zero maintenance** - Google จัดการ infrastructure
+- ✅ **High availability** - 99.95% SLA
 
 ---
 
-## 🚀 วิธีที่ 1: Google Cloud Platform (แนะนำ)
+## 🚀 วิธีที่ 1: Google Cloud Run (แนะนำ)
+
+### 🏗️ Architecture
+```
+Internet → Google Cloud Load Balancer (SSL) → Frontend (Cloud Run)
+                                          → Backend (Cloud Run)
+                                                   ↓
+                                                   Cloud SQL (PostgreSQL)
+                                                   Cloud Memorystore (Redis)
+```
+
+### ✅ ประโยชน์:
+- **ไม่ต้อง Nginx** - Google จัดการ routing + SSL
+- **Auto HTTPS** - SSL certificates automatic
+- **Global CDN** - Content delivery worldwide
+- **Auto-scaling** - 0 → 1000+ instances
+- **Pay per request** - ไม่มีค่าใช้จ่ายตอน idle
 
 ### Prerequisites
 - Google Cloud account พร้อม billing enabled
 - Domain name สำหรับ custom domain (optional)
-- Google Cloud CLI, Firebase CLI, Terraform installed
+- Google Cloud CLI installed
 
 ### ขั้นตอนที่ 1: เตรียม Environment Variables
 
@@ -45,17 +79,52 @@ QR_SECRET=your-qr-secret-key-32-chars-minimum
 CUSTOM_DOMAIN=yourdomain.com
 ```
 
-### ขั้นตอนที่ 2: Automated Deployment
+### ขั้นตอนที่ 2: Simple Cloud Run Deployment (แนะนำ)
 
 ```bash
 # 1. Clone repository
 git clone https://github.com/your-org/tru-activity.git
 cd tru-activity
 
-# 2. Make deployment script executable
+# 2. Login และตั้งค่า project
+gcloud auth login
+gcloud config set project your-project-id
+
+# 3. Enable APIs
+gcloud services enable run.googleapis.com sqladmin.googleapis.com redis.googleapis.com
+
+# 4. Deploy backend
+cd backend
+gcloud run deploy tru-activity-backend \
+  --source . \
+  --region asia-southeast1 \
+  --allow-unauthenticated \
+  --port 8080 \
+  --memory 1Gi \
+  --cpu 1 \
+  --max-instances 100
+
+# 5. Deploy frontend
+cd ../frontend
+gcloud run deploy tru-activity-frontend \
+  --source . \
+  --region asia-southeast1 \
+  --allow-unauthenticated \
+  --port 3000 \
+  --memory 512Mi \
+  --cpu 1 \
+  --max-instances 50
+
+# 6. เสร็จแล้ว! URLs จะแสดงใน terminal
+```
+
+### ขั้นตอนที่ 3: Advanced Deployment (ใช้ script)
+
+```bash
+# 1. Make deployment script executable
 chmod +x scripts/deploy.sh
 
-# 3. Run full deployment (แนะนำ)
+# 2. Run full deployment (รวม infrastructure)
 ./scripts/deploy.sh deploy
 
 # หรือ deploy ทีละส่วน
@@ -117,21 +186,91 @@ firebase deploy --only hosting
 ### ขั้นตอนที่ 4: Custom Domain Setup (Optional)
 
 ```bash
-# Map custom domain to Cloud Run
+# Map custom domain to Cloud Run services
 gcloud run domain-mappings create \
   --service=tru-activity-backend \
   --domain=api.yourdomain.com \
   --region=asia-southeast1
 
-# Map custom domain to Firebase
-firebase hosting:channel:deploy production \
-  --project=your-project-id \
-  --expires=never
+gcloud run domain-mappings create \
+  --service=tru-activity-frontend \
+  --domain=app.yourdomain.com \
+  --region=asia-southeast1
+
+# SSL certificates จะถูกสร้างอัตโนมัติ
+```
+
+### 💰 Cost Estimation (TRU Activity Usage)
+
+#### Google Cloud Run (แนะนำ):
+```
+📊 ประมาณ 1,500-3,000 บาท/เดือน (ปกติ) | 3,000-5,000 บาท/เดือน (peak):
+
+Frontend (Cloud Run):
+- CPU: ~200 บาท/เดือน (1 vCPU)
+- Memory: ~150 บาท/เดือน (512MB)
+- Requests: ~100 บาท/เดือน (10,000 requests)
+
+Backend (Cloud Run):
+- CPU: ~400 บาท/เดือน (1 vCPU)
+- Memory: ~300 บาท/เดือน (1GB)
+- Requests: ~200 บาท/เดือน (20,000 requests)
+
+Database (Cloud SQL):
+- Instance: ~800 บาท/เดือน (db-f1-micro)
+- Storage: ~200 บาท/เดือน (20GB SSD)
+
+Redis (Memorystore):
+- Instance: ~300 บาท/เดือน (1GB Basic)
+
+Total: ~1,550 บาท/เดือน (ปกติ) | ~3,000 บาท/เดือน (peak registration)
 ```
 
 ---
 
 ## 🐳 วิธีที่ 2: Docker + VPS Deployment
+
+### 🏗️ Architecture (ต้องใช้ Nginx)
+```
+Internet → Nginx (SSL + Reverse Proxy) → Frontend (Docker:3000)
+                                      → Backend (Docker:8080)
+                                               ↓
+                                               PostgreSQL (Docker:5432)
+                                               Redis (Docker:6379)
+```
+
+### 💰 Cost Estimation:
+```
+📊 ประมาณ 2,000-4,000 บาท/เดือน (คงที่):
+
+VPS Server:
+- 4GB RAM, 2 vCPU: ~1,500 บาท/เดือน
+- 8GB RAM, 4 vCPU: ~3,000 บาท/เดือน (สำหรับ high traffic)
+
+Domain + SSL:
+- Domain: ~500 บาท/ปี
+- Let's Encrypt SSL: ฟรี
+
+Backup Storage:
+- Cloud backup: ~300 บาท/เดือน
+
+Maintenance:
+- DevOps time: priceless 😅
+
+Total: ~2,000 บาท/เดือน (+ เวลาดูแล)
+```
+
+### ⚖️ เปรียบเทียบ Cloud Run vs VPS:
+
+| Feature | Cloud Run | VPS + Docker |
+|---------|-----------|-------------|
+| **Setup Time** | 15 นาที | 2-4 ชั่วโมง |
+| **SSL Setup** | อัตโนมัติ | Manual (Nginx + Certbot) |
+| **Scaling** | Auto (0-1000+) | Manual |
+| **Maintenance** | Zero | Weekly updates |
+| **Cost (Low Traffic)** | ~500 บาท | ~2,000 บาท |
+| **Cost (High Traffic)** | ~3,000 บาท | ~3,000 บาท |
+| **Learning Curve** | ง่าย | ยาก (DevOps skills) |
 
 ### Prerequisites
 - Ubuntu 20.04+ server
