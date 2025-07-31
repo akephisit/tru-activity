@@ -6,9 +6,9 @@ This guide provides comprehensive instructions for deploying the TRU Activity sy
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Firebase      │    │   Cloud Run      │    │   Cloud SQL     │
-│   Hosting       │◄───┤   (Backend)      │◄───┤   PostgreSQL    │
-│   (Frontend)    │    │                  │    │                 │
+│   Cloud Run     │◄──►│   Cloud Run      │◄───┤   Cloud SQL     │
+│   Frontend      │    │   Backend        │    │   PostgreSQL    │
+│  (SvelteKit)    │    │  (Go Fiber)      │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                               │
                               │
@@ -24,7 +24,6 @@ This guide provides comprehensive instructions for deploying the TRU Activity sy
 - [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
 - [Terraform](https://www.terraform.io/downloads) >= 1.0
 - [Docker](https://docs.docker.com/get-docker/)
-- [Firebase CLI](https://firebase.google.com/docs/cli)
 - [Node.js](https://nodejs.org/) >= 18
 - [Go](https://golang.org/doc/install) >= 1.21
 

@@ -84,30 +84,19 @@ steps:
     id: 'update-service-image'
     waitFor: ['deploy-backend']
 
-  # Build frontend
-  - name: 'node:18'
+  # Build and deploy frontend to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        cd frontend
-        npm ci
-        npm run build
-    env:
-      - 'PUBLIC_API_URL=https://tru-activity-backend-$_HASH-$_REGION.a.run.app'
-      - 'PUBLIC_GRAPHQL_URL=https://tru-activity-backend-$_HASH-$_REGION.a.run.app/query'
-      - 'PUBLIC_ENV=production'
-    id: 'build-frontend'
-
-  # Deploy frontend to Firebase Hosting
-  - name: 'gcr.io/$PROJECT_ID/firebase'
-    args:
-      - 'deploy'
-      - '--only=hosting'
-      - '--project=$PROJECT_ID'
-    dir: 'frontend'
+        # Build and deploy frontend using Cloud Build
+        gcloud builds submit \
+          --config=frontend/cloudbuild.yaml \
+          --substitutions=_REGION=$_REGION \
+          --project=$PROJECT_ID \
+          ./frontend
     id: 'deploy-frontend'
-    waitFor: ['build-frontend']
 
   # Run health checks
   - name: 'gcr.io/cloud-builders/curl'

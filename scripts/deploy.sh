@@ -40,7 +40,7 @@ log_error() {
 check_dependencies() {
     log_info "Checking dependencies..."
     
-    local deps=("gcloud" "terraform" "docker" "firebase")
+    local deps=("gcloud" "terraform" "docker")
     local missing_deps=()
     
     for dep in "${deps[@]}"; do
@@ -178,31 +178,17 @@ deploy_backend() {
     log_success "Backend deployed successfully"
 }
 
-# Deploy frontend
+# Deploy frontend to Cloud Run
 deploy_frontend() {
-    log_info "Deploying frontend to Firebase Hosting..."
+    log_info "Deploying frontend to Cloud Run..."
     
-    cd frontend
+    # Build and deploy using Cloud Build
+    gcloud builds submit \
+        --config=frontend/cloudbuild.yaml \
+        --substitutions=_REGION="$REGION" \
+        --project="$PROJECT_ID" \
+        ./frontend
     
-    # Update Firebase configuration
-    if [ -f ".firebaserc" ]; then
-        sed -i "s/YOUR_PROJECT_ID/$FRONTEND_PROJECT_ID/g" .firebaserc
-    fi
-    
-    # Install dependencies and build
-    npm ci
-    
-    # Set environment variables for build
-    export PUBLIC_API_URL="https://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
-    export PUBLIC_GRAPHQL_URL="https://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app/query"
-    export PUBLIC_ENV="production"
-    
-    npm run build
-    
-    # Deploy to Firebase
-    firebase deploy --only hosting --project="$FRONTEND_PROJECT_ID"
-    
-    cd - > /dev/null
     log_success "Frontend deployed successfully"
 }
 
@@ -285,7 +271,7 @@ main() {
     
     log_success "🎉 TRU Activity deployed successfully!"
     log_info "Backend URL: https://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
-    log_info "Frontend URL: https://$FRONTEND_PROJECT_ID.web.app"
+    log_info "Frontend URL: https://tru-activity-frontend-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
     log_info "Monitoring Dashboard: https://console.cloud.google.com/monitoring/dashboards"
 }
 
