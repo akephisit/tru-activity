@@ -22,10 +22,9 @@ This guide provides comprehensive instructions for deploying the TRU Activity sy
 
 ### Required Tools
 - [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
-- [Terraform](https://www.terraform.io/downloads) >= 1.0
 - [Docker](https://docs.docker.com/get-docker/)
-- [Node.js](https://nodejs.org/) >= 24.4.1
-- [Go](https://golang.org/doc/install) >= 1.24.5
+- [Node.js](https://nodejs.org/) >= 24.4.1 (for local development)
+- [Go](https://golang.org/doc/install) >= 1.24.5 (for local development)
 
 ### Google Cloud Setup
 1. Create a new GCP project or select an existing one
@@ -62,32 +61,26 @@ The script will guide you through:
 #### 1. Infrastructure Setup
 
 ```bash
-# Navigate to Terraform directory
-cd infrastructure/terraform
+# Set environment variables
+export PROJECT_ID="your-project-id"
+export REGION="asia-southeast1"
+export DB_PASSWORD="your-secure-database-password"
+export JWT_SECRET="your-jwt-secret-key"
+export SENDGRID_API_KEY="your-sendgrid-api-key"
+export QR_SECRET="your-qr-secret-key"
 
-# Create terraform.tfvars file
-cat > terraform.tfvars << EOF
-project_id = "your-project-id"
-region = "asia-southeast1"
-
-# Database configuration
-db_password = "your-secure-database-password"
-
-# JWT configuration
-jwt_secret = "your-jwt-secret-key"
-
-# Email configuration
-email_from = "noreply@yourdomain.com"
-sendgrid_api_key = "your-sendgrid-api-key"
-
-# QR code configuration
-qr_secret = "your-qr-secret-key"
+# Create .env.deploy file for the script
+cat > .env.deploy << EOF
+PROJECT_ID=$PROJECT_ID
+REGION=$REGION
+DB_PASSWORD=$DB_PASSWORD
+JWT_SECRET=$JWT_SECRET
+SENDGRID_API_KEY=$SENDGRID_API_KEY
+QR_SECRET=$QR_SECRET
 EOF
 
-# Initialize and apply Terraform
-terraform init
-terraform plan
-terraform apply
+# Run infrastructure setup
+./scripts/deploy.sh infrastructure
 ```
 
 ### 4. Production Docker Compose
