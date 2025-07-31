@@ -15,7 +15,8 @@ coverage
 dist
 build
 .svelte-kit
-.firebase
-firebase.json
-.firebaserc
+# Firebase (removed - not using Firebase)
+# .firebase
+# firebase.json
+# .firebaserc
 *.log

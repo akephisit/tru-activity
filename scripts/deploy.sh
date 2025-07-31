@@ -232,6 +232,98 @@ setup_monitoring() {
     log_success "Monitoring configured - check Cloud Console"
 }
 
+# Destroy all resources
+destroy_all() {
+    log_warning "🚨 THIS WILL DELETE ALL RESOURCES AND DATA! 🚨"
+    log_warning "This action is IRREVERSIBLE!"
+    echo ""
+    read -p "Type 'YES I WANT TO DELETE EVERYTHING' to confirm: " confirm
+    
+    if [ "$confirm" != "YES I WANT TO DELETE EVERYTHING" ]; then
+        log_info "Operation cancelled"
+        return 0
+    fi
+    
+    log_info "Starting resource destruction..."
+    
+    # Delete Cloud Run services
+    log_info "Deleting Cloud Run services..."
+    gcloud run services delete tru-activity-backend --region="$REGION" --quiet || log_warning "Backend service not found"
+    gcloud run services delete tru-activity-frontend --region="$REGION" --quiet || log_warning "Frontend service not found"
+    
+    # Delete VPC Connector
+    log_info "Deleting VPC Connector..."
+    gcloud compute networks vpc-access connectors delete tru-activity-connector --region="$REGION" --quiet || log_warning "VPC connector not found"
+    
+    # Delete Redis instance
+    log_info "Deleting Redis instance..."
+    gcloud redis instances delete tru-activity-redis --region="$REGION" --quiet || log_warning "Redis instance not found"
+    
+    # Delete Cloud SQL instance (WARNING: This deletes all data!)
+    log_info "Deleting Cloud SQL instance..."
+    gcloud sql instances delete tru-activity-db --quiet || log_warning "Cloud SQL instance not found"
+    
+    # Delete secrets
+    log_info "Deleting secrets..."
+    gcloud secrets delete db-password --quiet || log_warning "Secret not found"
+    gcloud secrets delete jwt-secret --quiet || log_warning "Secret not found"
+    gcloud secrets delete qr-secret --quiet || log_warning "Secret not found"
+    gcloud secrets delete sendgrid-api-key --quiet || log_warning "Secret not found"
+    
+    # Delete container images
+    log_info "Deleting container images..."
+    gcloud container images delete gcr.io/$PROJECT_ID/tru-activity-backend --force-delete-tags --quiet || log_warning "Backend images not found"
+    gcloud container images delete gcr.io/$PROJECT_ID/tru-activity-frontend --force-delete-tags --quiet || log_warning "Frontend images not found"
+    
+    log_success "🗑️ All resources have been destroyed!"
+    log_info "You may want to delete the project entirely: gcloud projects delete $PROJECT_ID"
+}
+
+# Reset database data only
+reset_database() {
+    log_warning "🚨 THIS WILL DELETE ALL DATABASE DATA! 🚨"
+    log_warning "This will keep infrastructure but wipe all application data"
+    echo ""
+    read -p "Type 'YES DELETE ALL DATA' to confirm: " confirm
+    
+    if [ "$confirm" != "YES DELETE ALL DATA" ]; then
+        log_info "Operation cancelled"
+        return 0
+    fi
+    
+    log_info "Resetting database..."
+    
+    # Drop and recreate database
+    gcloud sql databases delete tru_activity_prod --instance=tru-activity-db --quiet
+    gcloud sql databases create tru_activity_prod --instance=tru-activity-db
+    
+    # Restart backend services to run migrations
+    log_info "Restarting backend to run fresh migrations..."
+    gcloud run services update tru-activity-backend \
+        --region="$REGION" \
+        --set-env-vars="FORCE_MIGRATION=true"
+    
+    log_success "🔄 Database has been reset! Fresh start with clean data."
+}
+
+# Clean deployment (destroy and redeploy)
+clean_deploy() {
+    log_info "🧹 Clean deployment: Destroying everything and redeploying..."
+    
+    destroy_all
+    
+    if [ $? -eq 0 ]; then
+        log_info "Waiting 30 seconds for resources to be fully deleted..."
+        sleep 30
+        
+        log_info "Starting fresh deployment..."
+        main
+    else
+        log_error "Destruction failed, aborting clean deployment"
+        return 1
+    fi
+}
+
 # Cleanup function
 cleanup() {
     log_info "Cleaning up temporary files..."
@@ -301,8 +393,25 @@ case "${1:-deploy}" in
     "cleanup")
         cleanup
         ;;
+    "destroy")
+        check_dependencies
+        load_config
+        destroy_all
+        ;;
+    "reset")
+        check_dependencies
+        load_config
+        reset_database
+        ;;
+    "clean-deploy")
+        check_dependencies
+        load_config
+        auth_gcloud
+        enable_apis
+        clean_deploy
+        ;;
     *)
-        echo "Usage: $0 [deploy|infrastructure|backend|frontend|health|monitoring|cleanup]"
+        echo "Usage: $0 [deploy|infrastructure|backend|frontend|health|monitoring|cleanup|destroy|reset|clean-deploy]"
         echo ""
         echo "Commands:"
         echo "  deploy        - Full deployment (default)"
@@ -312,6 +421,13 @@ case "${1:-deploy}" in
         echo "  health        - Run health checks only"
         echo "  monitoring    - Setup monitoring only"
         echo "  cleanup       - Cleanup temporary files"
+        echo ""
+        echo "Destructive Commands:"
+        echo "  destroy       - 🚨 DELETE ALL RESOURCES (irreversible!)"
+        echo "  reset         - 🚨 DELETE ALL DATA (keep infrastructure)"
+        echo "  clean-deploy  - 🧹 Destroy everything and redeploy fresh"
+        echo ""
+        echo "⚠️  WARNING: destroy, reset, and clean-deploy will delete data!"
         exit 1
         ;;
 esac

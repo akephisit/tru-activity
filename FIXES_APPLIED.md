@@ -85,9 +85,9 @@ This document outlines all the errors found and fixes applied to ensure the fron
 
 ## Configuration Fixes
 
-### 1. Updated Terraform Variables
+### 1. Updated Deployment Configuration
 **Issue**: Missing configuration examples for deployment
-**Fix**: Created `infrastructure/terraform/terraform.tfvars.example`
+**Fix**: Created `.env.deploy.example` with gcloud-based deployment
 - Added all required variables with descriptions
 - Provided secure configuration guidelines
 
@@ -97,11 +97,11 @@ This document outlines all the errors found and fixes applied to ensure the fron
 - Added comprehensive deployment configuration
 - Included monitoring and domain settings
 
-### 3. Firebase Hosting Configuration
-**Issue**: Missing Firebase configuration for frontend
-**Fix**: Created proper `frontend/firebase.json`
-- Added security headers
-- Configured caching policies
+### 3. Cloud Run Configuration
+**Issue**: Missing Cloud Run configuration for frontend deployment
+**Fix**: Updated deployment to use Cloud Run for both frontend and backend
+- Removed Firebase dependencies
+- Added proper Cloud Run service configurations
 - Added proper rewrites for SPA routing
 
 ## Security Improvements
@@ -133,7 +133,7 @@ This document outlines all the errors found and fixes applied to ensure the fron
 ### 2. Frontend Build
 - Static site generation for better performance
 - Proper environment variable injection
-- Firebase Hosting optimization
+- Cloud Run optimization
 
 ### 3. Dependencies
 - Updated all deprecated packages
@@ -154,7 +154,7 @@ This document outlines all the errors found and fixes applied to ensure the fron
 
 ### 3. Cloud Platform Support
 - Google Cloud Run optimization
-- Firebase Hosting configuration
+- Cloud Run configuration
 - Kubernetes health check support
 
 ## Validation

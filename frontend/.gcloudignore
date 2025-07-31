@@ -96,10 +96,10 @@ dist/
 tmp/
 temp/
 
-# Firebase hosting files
-.firebase/
-firebase-debug.log
-firebase-debug.*.log
+# Firebase hosting files (removed - not using Firebase)
+# .firebase/
+# firebase-debug.log
+# firebase-debug.*.log
 
 # TRU Activity specific
 nginx.conf

@@ -67,7 +67,7 @@ spec:
               name: jwt-config
               key: secret
         - name: CORS_ORIGINS
-          value: "https://YOUR_FRONTEND_DOMAIN.web.app,https://YOUR_FRONTEND_DOMAIN.firebaseapp.com"
+          value: "https://tru-activity-frontend-PROJECT_ID-REGION.a.run.app"
         - name: NOTIFICATION_EMAIL_FROM
           valueFrom:
             secretKeyRef:
