@@ -19,6 +19,10 @@ REGION="asia-southeast1"
 BACKEND_SERVICE_NAME="tru-activity-backend"
 FRONTEND_PROJECT_ID=""
 
+# Deployment options
+CLEAN_DEPLOY=false
+INTERACTIVE_MODE=true
+
 # Helper functions
 log_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
@@ -34,6 +38,114 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}❌ $1${NC}"
+}
+
+# Interactive prompts
+ask_clean_deployment() {
+    if [ "$INTERACTIVE_MODE" = false ]; then
+        return
+    fi
+    
+    echo ""
+    log_info "🧹 Deployment Options"
+    echo ""
+    echo "Choose deployment mode:"
+    echo "1) Standard deployment (keep existing data)"
+    echo "2) Clean deployment (⚠️  DELETE all data and redeploy)"
+    echo "3) Reset database only (⚠️  DELETE database data, keep infrastructure)"
+    echo ""
+    read -p "Enter your choice (1-3) [default: 1]: " choice
+    
+    case $choice in
+        2)
+            log_warning "You selected CLEAN DEPLOYMENT"
+            log_warning "This will DELETE ALL resources and data!"
+            echo ""
+            log_warning "🚨 THIS WILL DELETE ALL RESOURCES AND DATA! 🚨"
+            log_warning "This action is IRREVERSIBLE!"
+            echo ""
+            read -p "Type 'YES I WANT TO DELETE EVERYTHING' to confirm: " confirm
+            if [ "$confirm" = "YES I WANT TO DELETE EVERYTHING" ]; then
+                CLEAN_DEPLOY=true
+            else
+                log_info "Continuing with standard deployment"
+            fi
+            ;;
+        3)
+            log_warning "You selected DATABASE RESET"
+            log_warning "This will DELETE ALL database data!"
+            echo ""
+            read -p "Are you sure? Type 'yes' to confirm: " confirm
+            if [ "$confirm" = "yes" ]; then
+                reset_database
+                return 1  # Skip main deployment
+            else
+                log_info "Continuing with standard deployment"
+            fi
+            ;;
+        1|"")
+            log_info "Continuing with standard deployment"
+            ;;
+        *)
+            log_warning "Invalid choice. Continuing with standard deployment"
+            ;;
+    esac
+}
+
+# Parse command line arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --clean)
+                CLEAN_DEPLOY=true
+                INTERACTIVE_MODE=false
+                shift
+                ;;
+            --no-interactive|-y)
+                INTERACTIVE_MODE=false
+                shift
+                ;;
+            --help|-h)
+                show_usage
+                exit 0
+                ;;
+            *)
+                # Assume it's the command
+                break
+                ;;
+        esac
+    done
+}
+
+# Show usage information
+show_usage() {
+    echo "Usage: $0 [OPTIONS] [COMMAND]"
+    echo ""
+    echo "Options:"
+    echo "  --clean           Clean deployment (delete all data and redeploy)"
+    echo "  --no-interactive  Skip interactive prompts"
+    echo "  -y                Same as --no-interactive"
+    echo "  --help, -h        Show this help message"
+    echo ""
+    echo "Commands:"
+    echo "  deploy            Full deployment (default)"
+    echo "  infrastructure    Deploy infrastructure only"
+    echo "  backend           Deploy backend only"
+    echo "  frontend          Deploy frontend only"
+    echo "  health            Run health checks only"
+    echo "  monitoring        Setup monitoring only"
+    echo "  cleanup           Cleanup temporary files"
+    echo ""
+    echo "Destructive Commands:"
+    echo "  destroy           🚨 DELETE ALL RESOURCES (irreversible!)"
+    echo "  reset             🚨 DELETE ALL DATA (keep infrastructure)"
+    echo "  clean-deploy      🧹 Destroy everything and redeploy fresh"
+    echo ""
+    echo "Examples:"
+    echo "  $0                          # Interactive deployment"
+    echo "  $0 --clean deploy           # Clean deployment without prompts"
+    echo "  $0 -y deploy               # Standard deployment without prompts"
+    echo "  $0 --clean infrastructure  # Clean infrastructure deployment"
 }
 
 # Check if required tools are installed
@@ -58,11 +170,52 @@ check_dependencies() {
     log_success "All dependencies are installed"
 }
 
+# Validate required environment variables
+validate_config() {
+    local missing_vars=()
+    
+    if [ -z "$PROJECT_ID" ]; then
+        missing_vars+=("PROJECT_ID")
+    fi
+    
+    if [ -z "$DB_PASSWORD" ] || [ ${#DB_PASSWORD} -lt 16 ]; then
+        missing_vars+=("DB_PASSWORD (minimum 16 characters)")
+    fi
+    
+    if [ -z "$JWT_SECRET" ] || [ ${#JWT_SECRET} -lt 32 ]; then
+        missing_vars+=("JWT_SECRET (minimum 32 characters)")
+    fi
+    
+    if [ -z "$QR_SECRET" ] || [ ${#QR_SECRET} -lt 32 ]; then
+        missing_vars+=("QR_SECRET (minimum 32 characters)")
+    fi
+    
+    if [ -z "$SENDGRID_API_KEY" ]; then
+        missing_vars+=("SENDGRID_API_KEY")
+    fi
+    
+    if [ ${#missing_vars[@]} -ne 0 ]; then
+        log_error "Missing or invalid configuration variables:"
+        for var in "${missing_vars[@]}"; do
+            log_error "  - $var"
+        done
+        log_info ""
+        log_info "Please create .env.deploy file based on .env.deploy.example"
+        log_info "Or set the required environment variables"
+        exit 1
+    fi
+}
+
 # Load configuration from file or environment
 load_config() {
     if [ -f ".env.deploy" ]; then
         log_info "Loading configuration from .env.deploy"
         source .env.deploy
+    elif [ -f ".env.deploy.example" ]; then
+        log_warning ".env.deploy not found, but .env.deploy.example exists"
+        log_info "Please copy .env.deploy.example to .env.deploy and update the values"
+        log_info "cp .env.deploy.example .env.deploy"
+        exit 1
     fi
     
     if [ -z "$PROJECT_ID" ]; then
@@ -75,6 +228,11 @@ load_config() {
     
     log_info "Using Project ID: $PROJECT_ID"
     log_info "Using Region: $REGION"
+    
+    # Validate configuration
+    validate_config
+    
+    log_success "Configuration loaded and validated"
 }
 
 # Authenticate with Google Cloud
@@ -90,50 +248,122 @@ auth_gcloud() {
     log_success "Google Cloud authentication verified"
 }
 
+# Check if resource exists
+resource_exists() {
+    local resource_type="$1"
+    local resource_name="$2"
+    local extra_args="$3"
+    
+    case "$resource_type" in
+        "sql-instance")
+            gcloud sql instances describe "$resource_name" &>/dev/null
+            ;;
+        "sql-database")
+            gcloud sql databases describe "$resource_name" --instance=tru-activity-db &>/dev/null
+            ;;
+        "redis-instance")
+            gcloud redis instances describe "$resource_name" --region="$REGION" &>/dev/null
+            ;;
+        "vpc-connector")
+            gcloud compute networks vpc-access connectors describe "$resource_name" --region="$REGION" &>/dev/null
+            ;;
+        "secret")
+            gcloud secrets describe "$resource_name" &>/dev/null
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 # Setup infrastructure with gcloud commands
 setup_infrastructure() {
     log_info "Setting up GCP resources..."
     
     # Create Cloud SQL instance
-    log_info "Creating Cloud SQL PostgreSQL instance..."
-    gcloud sql instances create tru-activity-db \
-        --database-version=POSTGRES_15 \
-        --tier=db-f1-micro \
-        --region="$REGION" \
-        --root-password="$DB_PASSWORD" \
-        --storage-size=20GB \
-        --storage-auto-increase \
-        --backup-start-time=03:00 \
-        --maintenance-window-day=SUN \
-        --maintenance-window-hour=04 \
-        --deletion-protection || log_warning "Cloud SQL instance may already exist"
+    if resource_exists "sql-instance" "tru-activity-db"; then
+        log_info "Cloud SQL instance already exists, skipping creation"
+    else
+        log_info "Creating Cloud SQL PostgreSQL instance..."
+        gcloud sql instances create tru-activity-db \
+            --database-version=POSTGRES_17 \
+            --tier=db-f1-micro \
+            --edition=ENTERPRISE \
+            --region="$REGION" \
+            --root-password="$DB_PASSWORD" \
+            --storage-size=20GB \
+            --storage-auto-increase \
+            --backup-start-time=03:00 \
+            --maintenance-window-day=SUN \
+            --maintenance-window-hour=04 \
+            --deletion-protection
+    fi
     
     # Create database
-    gcloud sql databases create tru_activity_prod \
-        --instance=tru-activity-db || log_warning "Database may already exist"
+    if resource_exists "sql-database" "tru_activity_prod"; then
+        log_info "Database already exists, skipping creation"
+    else
+        log_info "Creating database..."
+        gcloud sql databases create tru_activity_prod \
+            --instance=tru-activity-db
+    fi
     
     # Create Redis instance
-    log_info "Creating Redis instance..."
-    gcloud redis instances create tru-activity-redis \
-        --size=1 \
-        --region="$REGION" \
-        --redis-version=redis_7_0 || log_warning "Redis instance may already exist"
+    if resource_exists "redis-instance" "tru-activity-redis"; then
+        log_info "Redis instance already exists, skipping creation"
+    else
+        log_info "Creating Redis instance..."
+        gcloud redis instances create tru-activity-redis \
+            --size=1 \
+            --region="$REGION" \
+            --redis-version=redis_7_0
+    fi
     
     # Create VPC connector
-    log_info "Creating VPC connector..."
-    gcloud compute networks vpc-access connectors create tru-activity-connector \
-        --region="$REGION" \
-        --subnet-project="$PROJECT_ID" \
-        --subnet=default \
-        --min-instances=2 \
-        --max-instances=10 || log_warning "VPC connector may already exist"
+    if resource_exists "vpc-connector" "tru-activity-connector"; then
+        log_info "VPC connector already exists, skipping creation"
+    else
+        log_info "Creating VPC connector..."
+        gcloud compute networks vpc-access connectors create tru-activity-connector \
+            --region="$REGION" \
+            --subnet-project="$PROJECT_ID" \
+            --subnet=default \
+            --min-instances=2 \
+            --max-instances=10
+    fi
     
     # Create secrets
-    log_info "Creating secrets..."
-    echo -n "$DB_PASSWORD" | gcloud secrets create db-password --data-file=- || log_warning "Secret may already exist"
-    echo -n "$JWT_SECRET" | gcloud secrets create jwt-secret --data-file=- || log_warning "Secret may already exist"
-    echo -n "$QR_SECRET" | gcloud secrets create qr-secret --data-file=- || log_warning "Secret may already exist"
-    echo -n "$SENDGRID_API_KEY" | gcloud secrets create sendgrid-api-key --data-file=- || log_warning "Secret may already exist"
+    log_info "Setting up secrets..."
+    
+    if resource_exists "secret" "db-password"; then
+        log_info "Updating db-password secret..."
+        echo -n "$DB_PASSWORD" | gcloud secrets versions add db-password --data-file=-
+    else
+        log_info "Creating db-password secret..."
+        echo -n "$DB_PASSWORD" | gcloud secrets create db-password --data-file=-
+    fi
+    
+    if resource_exists "secret" "jwt-secret"; then
+        log_info "JWT secret already exists, skipping creation"
+    else
+        log_info "Creating jwt-secret..."
+        echo -n "$JWT_SECRET" | gcloud secrets create jwt-secret --data-file=-
+    fi
+    
+    if resource_exists "secret" "qr-secret"; then
+        log_info "QR secret already exists, skipping creation"
+    else
+        log_info "Creating qr-secret..."
+        echo -n "$QR_SECRET" | gcloud secrets create qr-secret --data-file=-
+    fi
+    
+    if resource_exists "secret" "sendgrid-api-key"; then
+        log_info "Updating sendgrid-api-key secret..."
+        echo -n "$SENDGRID_API_KEY" | gcloud secrets versions add sendgrid-api-key --data-file=-
+    else
+        log_info "Creating sendgrid-api-key secret..."
+        echo -n "$SENDGRID_API_KEY" | gcloud secrets create sendgrid-api-key --data-file=-
+    fi
     
     log_success "Infrastructure setup completed"
 }
@@ -342,6 +572,26 @@ main() {
     load_config
     auth_gcloud
     enable_apis
+    
+    # Ask for deployment options if interactive mode
+    if ! ask_clean_deployment; then
+        return 0  # User chose database reset, exit
+    fi
+    
+    # Handle clean deployment
+    if [ "$CLEAN_DEPLOY" = true ]; then
+        log_info "🧹 Performing clean deployment..."
+        destroy_all
+        if [ $? -eq 0 ]; then
+            log_info "Waiting 30 seconds for resources to be fully deleted..."
+            sleep 30
+            log_info "Continuing with fresh deployment..."
+        else
+            log_error "Clean deployment failed, aborting"
+            return 1
+        fi
+    fi
+    
     setup_infrastructure
     deploy_backend
     deploy_frontend
@@ -357,7 +607,14 @@ main() {
 }
 
 # Handle script arguments
-case "${1:-deploy}" in
+# Parse arguments first
+parse_arguments "$@"
+
+# Get the command (after parsing options)
+COMMAND="${1:-deploy}"
+shift || true  # Remove the command from arguments
+
+case "$COMMAND" in
     "deploy")
         main
         ;;
@@ -411,23 +668,7 @@ case "${1:-deploy}" in
         clean_deploy
         ;;
     *)
-        echo "Usage: $0 [deploy|infrastructure|backend|frontend|health|monitoring|cleanup|destroy|reset|clean-deploy]"
-        echo ""
-        echo "Commands:"
-        echo "  deploy        - Full deployment (default)"
-        echo "  infrastructure - Deploy infrastructure only"
-        echo "  backend       - Deploy backend only"
-        echo "  frontend      - Deploy frontend only"
-        echo "  health        - Run health checks only"
-        echo "  monitoring    - Setup monitoring only"
-        echo "  cleanup       - Cleanup temporary files"
-        echo ""
-        echo "Destructive Commands:"
-        echo "  destroy       - 🚨 DELETE ALL RESOURCES (irreversible!)"
-        echo "  reset         - 🚨 DELETE ALL DATA (keep infrastructure)"
-        echo "  clean-deploy  - 🧹 Destroy everything and redeploy fresh"
-        echo ""
-        echo "⚠️  WARNING: destroy, reset, and clean-deploy will delete data!"
+        show_usage
         exit 1
         ;;
 esac

@@ -92,7 +92,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: tru-activity-db-prod
     environment:
       POSTGRES_USER: truactivity
@@ -111,7 +111,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: tru-activity-redis-prod
     command: redis-server --requirepass ${REDIS_PASSWORD}
     volumes:
