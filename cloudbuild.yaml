@@ -131,12 +131,13 @@ steps:
         set -e
         echo "Running health checks..."
         
-        # Get the service URL
-        SERVICE_URL=$(gcloud run services describe tru-activity-backend \
+        # Get the service URL and check health
+        echo "Getting service URL and checking health..."
+        SERVICE_ENDPOINT=$(gcloud run services describe tru-activity-backend \
           --region=$_REGION \
           --format="value(status.url)")
         
-        echo "Service URL: $SERVICE_URL"
+        echo "Service URL: $${SERVICE_ENDPOINT}"
         
         # Wait for service to be ready
         echo "Waiting for service to be ready..."
@@ -144,7 +145,7 @@ steps:
         
         # Check health endpoint
         echo "Checking health endpoint..."
-        curl -f "$SERVICE_URL/health" || {
+        curl -f "$${SERVICE_ENDPOINT}/health" || {
           echo "Health check failed, checking service logs..."
           gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=tru-activity-backend" --limit=50 --format="value(textPayload)"
           exit 1

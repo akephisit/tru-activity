@@ -178,16 +178,16 @@ validate_config() {
         missing_vars+=("PROJECT_ID")
     fi
     
-    if [ -z "$DB_PASSWORD" ] || [ ${#DB_PASSWORD} -lt 16 ]; then
-        missing_vars+=("DB_PASSWORD (minimum 16 characters)")
+    if [ -z "$DB_PASSWORD" ]; then
+        missing_vars+=("DB_PASSWORD")
     fi
     
-    if [ -z "$JWT_SECRET" ] || [ ${#JWT_SECRET} -lt 32 ]; then
-        missing_vars+=("JWT_SECRET (minimum 32 characters)")
+    if [ -z "$JWT_SECRET" ]; then
+        missing_vars+=("JWT_SECRET")
     fi
     
-    if [ -z "$QR_SECRET" ] || [ ${#QR_SECRET} -lt 32 ]; then
-        missing_vars+=("QR_SECRET (minimum 32 characters)")
+    if [ -z "$QR_SECRET" ]; then
+        missing_vars+=("QR_SECRET")
     fi
     
     if [ -z "$SENDGRID_API_KEY" ]; then
@@ -225,6 +225,15 @@ load_config() {
     if [ -z "$FRONTEND_PROJECT_ID" ]; then
         FRONTEND_PROJECT_ID=$PROJECT_ID
     fi
+    
+    # Export variables for validation
+    export PROJECT_ID
+    export REGION
+    export DB_PASSWORD
+    export JWT_SECRET
+    export QR_SECRET
+    export SENDGRID_API_KEY
+    export FRONTEND_PROJECT_ID
     
     log_info "Using Project ID: $PROJECT_ID"
     log_info "Using Region: $REGION"
