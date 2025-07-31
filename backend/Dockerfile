@@ -1,5 +1,5 @@
 # Development Dockerfile for Go Backend
-FROM golang:1.22-alpine AS development
+FROM golang:1.24.5-alpine AS development
 
 # Install git and other dependencies
 RUN apk add --no-cache git
@@ -26,7 +26,7 @@ EXPOSE 8080
 CMD ["air", "-c", ".air.toml"]
 
 # Production build stage
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24.5-alpine AS builder
 
 # Install dependencies for building
 RUN apk add --no-cache git ca-certificates

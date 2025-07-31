@@ -1,5 +1,5 @@
 # Cloud Run Dockerfile for SvelteKit Frontend
-FROM node:20-alpine AS builder
+FROM node:24.4.1-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Production stage - Use Node.js server for Cloud Run
-FROM node:20-alpine AS production
+FROM node:24.4.1-alpine AS production
 
 # Install dependencies needed for production
 RUN apk add --no-cache curl

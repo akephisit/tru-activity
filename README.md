@@ -63,8 +63,8 @@
 
 ### Prerequisites
 - Docker และ Docker Compose
-- Node.js 20+ (สำหรับ local frontend development)
-- Go 1.22+ (สำหรับ local backend development)
+- Node.js 24.4.1+ (สำหรับ local frontend development)
+- Go 1.24.5+ (สำหรับ local backend development)
 
 ### 1. Clone Repository
 ```bash

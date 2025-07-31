@@ -24,8 +24,8 @@ This guide provides comprehensive instructions for deploying the TRU Activity sy
 - [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
 - [Terraform](https://www.terraform.io/downloads) >= 1.0
 - [Docker](https://docs.docker.com/get-docker/)
-- [Node.js](https://nodejs.org/) >= 18
-- [Go](https://golang.org/doc/install) >= 1.21
+- [Node.js](https://nodejs.org/) >= 24.4.1
+- [Go](https://golang.org/doc/install) >= 1.24.5
 
 ### Google Cloud Setup
 1. Create a new GCP project or select an existing one
@@ -179,7 +179,7 @@ volumes:
 
 ```dockerfile
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:24.4.1-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -189,7 +189,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:24.4.1-alpine AS production
 
 WORKDIR /app
 COPY --from=builder /app/build build/
