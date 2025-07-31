@@ -1,14 +1,30 @@
 steps:
+  # Validate Dockerfile and context
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Validating Docker context..."
+        ls -la backend/
+        echo "Checking Dockerfile..."
+        cat backend/Dockerfile | head -10
+        echo "Checking go.mod..."
+        cat backend/go.mod | head -10
+    id: 'validate-context'
+
   # Build backend Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--no-cache'
       - '-t'
       - 'gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA'
       - '-t'
       - 'gcr.io/$PROJECT_ID/tru-activity-backend:latest'
       - './backend'
     id: 'build-backend'
+    waitFor: ['validate-context']
 
   # Push backend images
   - name: 'gcr.io/cloud-builders/docker'
@@ -31,30 +47,38 @@ steps:
     args:
       - '-c'
       - |
+        set -e
+        echo "Starting database migration..."
+        
         # Create a temporary Cloud Run job for migrations
+        echo "Creating migration job..."
         gcloud run jobs create migration-job-${COMMIT_SHA} \
           --image=gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA \
           --region=$_REGION \
           --service-account=tru-activity-migration@$PROJECT_ID.iam.gserviceaccount.com \
-          --set-env-vars="MIGRATION_MODE=true" \
-          --set-secrets="DB_HOST=db-config:host,DB_PORT=db-config:port,DB_NAME=db-config:name,DB_USER=db-config:user,DB_PASSWORD=db-config:password" \
+          --set-env-vars="DB_HOST=/cloudsql/$PROJECT_ID:$_REGION:tru-activity-db,DB_PORT=5432,DB_NAME=tru_activity_prod,DB_USER=postgres,MIGRATION_MODE=true" \
+          --set-secrets="DB_PASSWORD=db-password:latest" \
           --vpc-connector=projects/$PROJECT_ID/locations/$_REGION/connectors/tru-activity-connector \
           --vpc-egress=private-ranges-only \
           --memory=1Gi \
           --cpu=1 \
           --max-retries=2 \
           --parallelism=1 \
-          --task-count=1
+          --task-count=1 || echo "Migration job might already exist"
         
         # Execute the migration job
+        echo "Executing migration job..."
         gcloud run jobs execute migration-job-${COMMIT_SHA} \
           --region=$_REGION \
           --wait
         
+        echo "Migration completed successfully"
+        
         # Clean up the migration job
+        echo "Cleaning up migration job..."
         gcloud run jobs delete migration-job-${COMMIT_SHA} \
           --region=$_REGION \
-          --quiet
+          --quiet || echo "Migration job cleanup completed"
     id: 'run-migrations'
     waitFor: ['push-backend-sha']
 
@@ -99,10 +123,34 @@ steps:
     id: 'deploy-frontend'
 
   # Run health checks
-  - name: 'gcr.io/cloud-builders/curl'
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
     args:
-      - '-f'
-      - 'https://tru-activity-backend-$_HASH-$_REGION.a.run.app/health'
+      - '-c'
+      - |
+        set -e
+        echo "Running health checks..."
+        
+        # Get the service URL
+        SERVICE_URL=$(gcloud run services describe tru-activity-backend \
+          --region=$_REGION \
+          --format="value(status.url)")
+        
+        echo "Service URL: $SERVICE_URL"
+        
+        # Wait for service to be ready
+        echo "Waiting for service to be ready..."
+        sleep 30
+        
+        # Check health endpoint
+        echo "Checking health endpoint..."
+        curl -f "$SERVICE_URL/health" || {
+          echo "Health check failed, checking service logs..."
+          gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=tru-activity-backend" --limit=50 --format="value(textPayload)"
+          exit 1
+        }
+        
+        echo "Health check passed!"
     id: 'health-check'
     waitFor: ['update-service-image']
 

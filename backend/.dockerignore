@@ -1,0 +1,58 @@
+# Ignore development files
+*.log
+*.tmp
+*.temp
+.env*
+!.env.example
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Test files
+*_test.go
+test/
+coverage.out
+
+# Air hot reload
+.air.toml
+tmp/
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+
+# Build artifacts (keep migrations)
+vendor/
+bin/
+dist/
+
+# Node modules (if any)
+node_modules/
+
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum

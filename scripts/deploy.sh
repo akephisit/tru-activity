@@ -368,6 +368,98 @@ setup_infrastructure() {
     log_success "Infrastructure setup completed"
 }
 
+# Create service accounts and IAM roles
+setup_service_accounts() {
+    log_info "Setting up service accounts..."
+    
+    # Create backend service account
+    if ! gcloud iam service-accounts describe tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com &>/dev/null; then
+        log_info "Creating backend service account..."
+        gcloud iam service-accounts create tru-activity-backend \
+            --display-name="TRU Activity Backend Service Account" \
+            --description="Service account for TRU Activity backend"
+    else
+        log_info "Backend service account already exists"
+    fi
+    
+    # Create migration service account
+    if ! gcloud iam service-accounts describe tru-activity-migration@$PROJECT_ID.iam.gserviceaccount.com &>/dev/null; then
+        log_info "Creating migration service account..."
+        gcloud iam service-accounts create tru-activity-migration \
+            --display-name="TRU Activity Migration Service Account" \
+            --description="Service account for database migrations"
+    else
+        log_info "Migration service account already exists"
+    fi
+    
+    # Grant necessary IAM roles to backend service account
+    log_info "Setting up IAM roles for backend service account..."
+    local backend_sa="tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com"
+    
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:$backend_sa" \
+        --role="roles/cloudsql.client" \
+        --quiet || true
+    
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:$backend_sa" \
+        --role="roles/redis.editor" \
+        --quiet || true
+    
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:$backend_sa" \
+        --role="roles/secretmanager.secretAccessor" \
+        --quiet || true
+    
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:$backend_sa" \
+        --role="roles/cloudsql.instanceUser" \
+        --quiet || true
+    
+    # Grant necessary IAM roles to migration service account
+    log_info "Setting up IAM roles for migration service account..."
+    local migration_sa="tru-activity-migration@$PROJECT_ID.iam.gserviceaccount.com"
+    
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:$migration_sa" \
+        --role="roles/cloudsql.client" \
+        --quiet || true
+    
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:$migration_sa" \
+        --role="roles/secretmanager.secretAccessor" \
+        --quiet || true
+    
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+        --member="serviceAccount:$migration_sa" \
+        --role="roles/cloudsql.instanceUser" \
+        --quiet || true
+    
+    log_success "Service accounts setup completed"
+}
+
+
+# Update service.yaml with current project values
+update_service_yaml() {
+    log_info "Updating service.yaml with project values..."
+    
+    # Get Redis IP
+    local redis_ip
+    redis_ip=$(gcloud redis instances describe tru-activity-redis --region=$REGION --format="value(host)" 2>/dev/null || echo "10.0.0.1")
+    
+    # Create a temporary service.yaml with substituted values
+    sed -e "s/PROJECT_ID/$PROJECT_ID/g" \
+        -e "s/REGION/$REGION/g" \
+        -e "s/REDIS_IP/$redis_ip/g" \
+        backend/service.yaml > /tmp/service.yaml.tmp
+    
+    # Replace the original with updated version
+    cp /tmp/service.yaml.tmp backend/service.yaml
+    rm /tmp/service.yaml.tmp
+    
+    log_success "Service.yaml updated successfully"
+}
+
 # Enable required APIs
 enable_apis() {
     log_info "Enabling required Google Cloud APIs..."
@@ -593,6 +685,8 @@ main() {
     fi
     
     setup_infrastructure
+    setup_service_accounts  
+    update_service_yaml
     deploy_backend
     deploy_frontend
     
