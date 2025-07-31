@@ -1,5 +1,5 @@
 # Development Dockerfile for Go Backend
-FROM golang:1.24.5-alpine AS development
+FROM golang:alpine AS development
 
 # Install git and other dependencies
 RUN apk add --no-cache git
@@ -26,7 +26,7 @@ EXPOSE 8080
 CMD ["air", "-c", ".air.toml"]
 
 # Production build stage
-FROM golang:1.24.5-alpine AS builder
+FROM golang:alpine AS builder
 
 # Install dependencies for building
 RUN apk add --no-cache git ca-certificates tzdata
@@ -69,7 +69,8 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /app/main .
 
 # Copy migrations if they exist
-COPY --from=builder /app/migrations/ ./migrations/ 2>/dev/null || true
+RUN mkdir -p ./migrations
+COPY --from=builder /app/migrations/ ./migrations/
 
 # Make binary executable and change ownership
 RUN chmod +x ./main && \
