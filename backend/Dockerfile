@@ -14,7 +14,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Install air for hot reloading
-RUN go install github.com/cosmtrek/air@latest
+RUN go install github.com/air-verse/air@latest
 
 # Copy source code
 COPY . .
@@ -47,7 +47,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o main ./cmd/server/main.go
 
 # Verify the binary was created
-RUN ls -la main && file main
+RUN ls -la main
 
 # Production stage
 FROM alpine:latest AS production

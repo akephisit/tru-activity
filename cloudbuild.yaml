@@ -19,7 +19,7 @@ steps:
       - 'build'
       - '--no-cache'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/tru-activity-backend:$BUILD_ID'
       - '-t'
       - 'gcr.io/$PROJECT_ID/tru-activity-backend:latest'
       - './backend'
@@ -30,7 +30,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/tru-activity-backend:$BUILD_ID'
     id: 'push-backend-sha'
     waitFor: ['build-backend']
 
@@ -52,8 +52,8 @@ steps:
         
         # Create a temporary Cloud Run job for migrations
         echo "Creating migration job..."
-        gcloud run jobs create migration-job-${COMMIT_SHA} \
-          --image=gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA \
+        gcloud run jobs create migration-job-${BUILD_ID} \
+          --image=gcr.io/$PROJECT_ID/tru-activity-backend:$BUILD_ID \
           --region=$_REGION \
           --service-account=tru-activity-migration@$PROJECT_ID.iam.gserviceaccount.com \
           --set-env-vars="DB_HOST=/cloudsql/$PROJECT_ID:$_REGION:tru-activity-db,DB_PORT=5432,DB_NAME=tru_activity_prod,DB_USER=postgres,MIGRATION_MODE=true" \
@@ -68,7 +68,7 @@ steps:
         
         # Execute the migration job
         echo "Executing migration job..."
-        gcloud run jobs execute migration-job-${COMMIT_SHA} \
+        gcloud run jobs execute migration-job-${BUILD_ID} \
           --region=$_REGION \
           --wait
         
@@ -76,7 +76,7 @@ steps:
         
         # Clean up the migration job
         echo "Cleaning up migration job..."
-        gcloud run jobs delete migration-job-${COMMIT_SHA} \
+        gcloud run jobs delete migration-job-${BUILD_ID} \
           --region=$_REGION \
           --quiet || echo "Migration job cleanup completed"
     id: 'run-migrations'
@@ -103,7 +103,7 @@ steps:
       - '-c'
       - |
         gcloud run services update tru-activity-backend \
-          --image=gcr.io/$PROJECT_ID/tru-activity-backend:$COMMIT_SHA \
+          --image=gcr.io/$PROJECT_ID/tru-activity-backend:$BUILD_ID \
           --region=$_REGION
     id: 'update-service-image'
     waitFor: ['deploy-backend']
