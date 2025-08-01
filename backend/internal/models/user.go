@@ -36,7 +36,6 @@ type User struct {
 
 	// Associations
 	Participations []Participation `json:"participations"`
-	Subscriptions  []Subscription  `json:"subscriptions"`
 }
 
 func (u *User) IsAdmin() bool {

@@ -4,6 +4,8 @@ metadata:
   name: tru-activity-backend
   annotations:
     run.googleapis.com/ingress: all
+    run.googleapis.com/allow-unauthenticated: "true"
+    run.googleapis.com/allow-unauthenticated: "true"
 spec:
   template:
     metadata:
@@ -14,6 +16,7 @@ spec:
         run.googleapis.com/cpu: "2"
         run.googleapis.com/timeout: "900s"
         run.googleapis.com/startup-cpu-boost: "true"
+        app.version: "v1.0.3"
         run.googleapis.com/execution-environment: gen2
         run.googleapis.com/cpu-throttling: "false"
         run.googleapis.com/vpc-access-connector: projects/tru-activity-467606/locations/asia-southeast1/connectors/tru-activity-connector

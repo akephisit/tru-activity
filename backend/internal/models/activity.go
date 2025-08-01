@@ -113,7 +113,7 @@ type ActivityTemplate struct {
 	DeletedAt       gorm.DeletedAt   `json:"deleted_at" gorm:"index"`
 
 	// Associations
-	Activities []Activity `json:"activities"`
+	Activities []Activity `json:"activities" gorm:"foreignKey:TemplateID"`
 }
 
 // ActivityAssignment represents assignment of activities to regular admins

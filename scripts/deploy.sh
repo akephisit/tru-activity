@@ -512,6 +512,7 @@ update_service_yaml() {
         -e "s|/cloudsql/PROJECT_ID:REGION:tru-activity-db|$sql_ip|g" \
         -e "s/127\.0\.0\.1/$sql_ip/g" \
         -e "s/35\.185\.188\.104/$sql_ip/g" \
+        -e '/run\.googleapis\.com\/allow-unauthenticated/!s/run\.googleapis\.com\/ingress: all/run.googleapis.com\/ingress: all\n    run.googleapis.com\/allow-unauthenticated: "true"/' \
         backend/service.yaml > /tmp/service.yaml.tmp
     
     # Replace the original with updated version
@@ -754,6 +755,14 @@ main() {
     sleep 10  # Give services time to start
     health_check
     setup_monitoring
+    
+    # Grant public access to Cloud Run service for frontend connectivity
+    log_info "Setting up public access for Cloud Run service..."
+    gcloud run services add-iam-policy-binding tru-activity-backend \
+        --member="allUsers" \
+        --role="roles/run.invoker" \
+        --region="$REGION" \
+        --quiet || log_warning "Failed to set public access (might already exist)"
     
     log_success "🎉 TRU Activity deployed successfully!"
     log_info "Backend URL: https://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
