@@ -13,6 +13,7 @@ spec:
         run.googleapis.com/memory: "2Gi"
         run.googleapis.com/cpu: "2"
         run.googleapis.com/timeout: "900s"
+        run.googleapis.com/startup-cpu-boost: "true"
         run.googleapis.com/execution-environment: gen2
         run.googleapis.com/cpu-throttling: "false"
         run.googleapis.com/vpc-access-connector: projects/tru-activity-467606/locations/asia-southeast1/connectors/tru-activity-connector
@@ -29,13 +30,15 @@ spec:
         - name: ENV
           value: "production"
         - name: DB_HOST
-          value: "/cloudsql/tru-activity-467606:asia-southeast1:tru-activity-db"
+          value: "35.185.188.104"
         - name: DB_PORT
           value: "5432"
         - name: DB_NAME
           value: "tru_activity_prod"
         - name: DB_USER
           value: "postgres"
+        - name: DB_SSLMODE
+          value: "require"
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:

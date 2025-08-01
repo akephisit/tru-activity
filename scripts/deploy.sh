@@ -291,7 +291,12 @@ setup_infrastructure() {
     
     # Create Cloud SQL instance
     if resource_exists "sql-instance" "tru-activity-db"; then
-        log_info "Cloud SQL instance already exists, skipping creation"
+        log_info "Cloud SQL instance already exists, checking configuration..."
+        # Ensure public IP is enabled and authorized networks are set
+        gcloud sql instances patch tru-activity-db \
+            --authorized-networks=0.0.0.0/0 \
+            --assign-ip \
+            --quiet || log_warning "Failed to update SQL instance configuration"
     else
         log_info "Creating Cloud SQL PostgreSQL instance..."
         gcloud sql instances create tru-activity-db \
@@ -305,7 +310,9 @@ setup_infrastructure() {
             --backup-start-time=03:00 \
             --maintenance-window-day=SUN \
             --maintenance-window-hour=04 \
-            --deletion-protection
+            --deletion-protection \
+            --authorized-networks=0.0.0.0/0 \
+            --assign-ip
     fi
     
     # Create database
@@ -326,6 +333,17 @@ setup_infrastructure() {
             --size=1 \
             --region="$REGION" \
             --redis-version=redis_7_0
+    fi
+    
+    # Create subnet for VPC connector if it doesn't exist
+    if ! gcloud compute networks subnets describe tru-activity-connector-subnet --region="$REGION" &>/dev/null; then
+        log_info "Creating VPC connector subnet..."
+        gcloud compute networks subnets create tru-activity-connector-subnet \
+            --network=default \
+            --range=10.8.0.0/28 \
+            --region="$REGION"
+    else
+        log_info "VPC connector subnet already exists"
     fi
     
     # Create VPC connector
@@ -483,10 +501,17 @@ update_service_yaml() {
     local redis_ip
     redis_ip=$(gcloud redis instances describe tru-activity-redis --region=$REGION --format="value(host)" 2>/dev/null || echo "10.0.0.1")
     
+    # Get Cloud SQL public IP
+    local sql_ip
+    sql_ip=$(gcloud sql instances describe tru-activity-db --format="value(ipAddresses[0].ipAddress)" 2>/dev/null || echo "127.0.0.1")
+    
     # Create a temporary service.yaml with substituted values
     sed -e "s/PROJECT_ID/$PROJECT_ID/g" \
         -e "s/REGION/$REGION/g" \
         -e "s/REDIS_IP/$redis_ip/g" \
+        -e "s|/cloudsql/PROJECT_ID:REGION:tru-activity-db|$sql_ip|g" \
+        -e "s/127\.0\.0\.1/$sql_ip/g" \
+        -e "s/35\.185\.188\.104/$sql_ip/g" \
         backend/service.yaml > /tmp/service.yaml.tmp
     
     # Replace the original with updated version
