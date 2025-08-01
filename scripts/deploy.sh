@@ -336,7 +336,7 @@ setup_infrastructure() {
         gcloud compute networks vpc-access connectors create tru-activity-connector \
             --region="$REGION" \
             --subnet-project="$PROJECT_ID" \
-            --subnet=default \
+            --subnet=tru-activity-connector-subnet \
             --min-instances=2 \
             --max-instances=10
     fi

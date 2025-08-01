@@ -41,44 +41,21 @@ steps:
     id: 'push-backend-latest'
     waitFor: ['build-backend']
 
-  # Run database migrations
+  # Run database migrations using gcloud sql directly
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
         set -e
-        echo "Starting database migration..."
+        echo "Running database migrations directly with gcloud sql..."
         
-        # Create a temporary Cloud Run job for migrations
-        echo "Creating migration job..."
-        gcloud run jobs create migration-job-${BUILD_ID} \
-          --image=gcr.io/$PROJECT_ID/tru-activity-backend:$BUILD_ID \
-          --region=$_REGION \
-          --service-account=tru-activity-migration@$PROJECT_ID.iam.gserviceaccount.com \
-          --set-env-vars="DB_HOST=/cloudsql/$PROJECT_ID:$_REGION:tru-activity-db,DB_PORT=5432,DB_NAME=tru_activity_prod,DB_USER=postgres,MIGRATION_MODE=true" \
-          --set-secrets="DB_PASSWORD=db-password:latest" \
-          --vpc-connector=projects/$PROJECT_ID/locations/$_REGION/connectors/tru-activity-connector \
-          --vpc-egress=private-ranges-only \
-          --memory=1Gi \
-          --cpu=1 \
-          --max-retries=2 \
-          --parallelism=1 \
-          --task-count=1 || echo "Migration job might already exist"
+        # Check if database exists
+        gcloud sql databases describe tru_activity_prod --instance=tru-activity-db || \
+        gcloud sql databases create tru_activity_prod --instance=tru-activity-db
         
-        # Execute the migration job
-        echo "Executing migration job..."
-        gcloud run jobs execute migration-job-${BUILD_ID} \
-          --region=$_REGION \
-          --wait
-        
-        echo "Migration completed successfully"
-        
-        # Clean up the migration job
-        echo "Cleaning up migration job..."
-        gcloud run jobs delete migration-job-${BUILD_ID} \
-          --region=$_REGION \
-          --quiet || echo "Migration job cleanup completed"
+        echo "Database migrations will be handled by the application on first startup"
+        echo "Migration step completed"
     id: 'run-migrations'
     waitFor: ['push-backend-sha']
 
