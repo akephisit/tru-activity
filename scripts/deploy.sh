@@ -353,14 +353,22 @@ setup_infrastructure() {
     fi
     
     if resource_exists "secret" "jwt-secret"; then
-        log_info "JWT secret already exists, skipping creation"
+        log_info "JWT secret already exists, checking versions..."
+        # Add version if no versions exist
+        if [ $(gcloud secrets versions list jwt-secret --format="value(name)" | wc -l) -eq 0 ]; then
+            echo -n "$JWT_SECRET" | gcloud secrets versions add jwt-secret --data-file=-
+        fi
     else
         log_info "Creating jwt-secret..."
         echo -n "$JWT_SECRET" | gcloud secrets create jwt-secret --data-file=-
     fi
     
     if resource_exists "secret" "qr-secret"; then
-        log_info "QR secret already exists, skipping creation"
+        log_info "QR secret already exists, checking versions..."
+        # Add version if no versions exist
+        if [ $(gcloud secrets versions list qr-secret --format="value(name)" | wc -l) -eq 0 ]; then
+            echo -n "$QR_SECRET" | gcloud secrets versions add qr-secret --data-file=-
+        fi
     else
         log_info "Creating qr-secret..."
         echo -n "$QR_SECRET" | gcloud secrets create qr-secret --data-file=-
@@ -373,6 +381,25 @@ setup_infrastructure() {
         log_info "Creating sendgrid-api-key secret..."
         echo -n "$SENDGRID_API_KEY" | gcloud secrets create sendgrid-api-key --data-file=-
     fi
+    
+    # Grant secret access permissions to backend service account
+    log_info "Setting up secret access permissions..."
+    local backend_sa="tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com"
+    
+    gcloud secrets add-iam-policy-binding jwt-secret \
+        --member="serviceAccount:$backend_sa" \
+        --role="roles/secretmanager.secretAccessor" \
+        --quiet || true
+    
+    gcloud secrets add-iam-policy-binding qr-secret \
+        --member="serviceAccount:$backend_sa" \
+        --role="roles/secretmanager.secretAccessor" \
+        --quiet || true
+    
+    gcloud secrets add-iam-policy-binding sendgrid-api-key \
+        --member="serviceAccount:$backend_sa" \
+        --role="roles/secretmanager.secretAccessor" \
+        --quiet || true
     
     log_success "Infrastructure setup completed"
 }
