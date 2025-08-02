@@ -482,5 +482,5 @@ tags:
   - 'backend'
   - 'frontend'
 
-# Timeout
-timeout: '1200s'
+# Timeout  
+timeout: '2400s'
