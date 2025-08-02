@@ -334,7 +334,12 @@ steps:
           --image=gcr.io/$PROJECT_ID/tru-activity-backend:$BUILD_ID \
           --region=$_REGION
         
-        # Public access is configured via service.yaml annotation
+        # Allow public access to the service
+        echo "Setting IAM policy to allow public access..."
+        gcloud run services add-iam-policy-binding tru-activity-backend \
+          --member="allUsers" \
+          --role="roles/run.invoker" \
+          --region=$_REGION --quiet || echo "IAM policy already set"
     id: 'update-service-image'
     waitFor: ['deploy-backend']
 
@@ -432,7 +437,12 @@ steps:
           --image=gcr.io/$PROJECT_ID/tru-activity-frontend:$BUILD_ID \
           --region=$_REGION
         
-        # Public access is configured via service.yaml annotation
+        # Allow public access to the frontend service
+        echo "Setting IAM policy to allow public access for frontend..."
+        gcloud run services add-iam-policy-binding tru-activity-frontend \
+          --member="allUsers" \
+          --role="roles/run.invoker" \
+          --region=$_REGION --quiet || echo "Frontend IAM policy already set"
     id: 'update-frontend-image'
     waitFor: ['deploy-frontend']
 
