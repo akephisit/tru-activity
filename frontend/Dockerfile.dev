@@ -1,0 +1,30 @@
+# Development Dockerfile for SvelteKit Frontend
+FROM node:20-alpine AS development
+
+# Install development tools
+RUN apk add --no-cache git curl
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose ports (3000 for build, 5173 for dev server)
+EXPOSE 3000 5173
+
+# Create startup script for development
+RUN echo '#!/bin/sh\n\
+echo "Starting SvelteKit development server..."\n\
+npm run dev -- --host 0.0.0.0 --port 5173' > /app/dev-start.sh
+
+RUN chmod +x /app/dev-start.sh
+
+# Start development server
+CMD ["/app/dev-start.sh"]

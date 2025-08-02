@@ -1,0 +1,92 @@
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: tru-activity-postgres
+    environment:
+      POSTGRES_DB: tru_activity_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devpassword123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - tru-activity-network
+
+  # Redis Cache
+  redis:
+    image: redis:alpine
+    container_name: tru-activity-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - tru-activity-network
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  # Backend Development
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: tru-activity-backend
+    environment:
+      ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tru_activity_dev
+      DB_USER: postgres
+      DB_PASSWORD: devpassword123
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: dev-jwt-secret-key-123
+      QR_SECRET_KEY: dev-qr-secret-key-123
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      NOTIFICATION_EMAIL_FROM: dev@localhost
+      SENDGRID_API_KEY: dummy_dev_key
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - /app/vendor  # Exclude vendor directory
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - tru-activity-network
+    restart: unless-stopped
+
+  # Frontend Development
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: tru-activity-frontend
+    environment:
+      NODE_ENV: development
+      PUBLIC_API_URL: http://localhost:8080
+      PUBLIC_GRAPHQL_URL: http://localhost:8080/query
+    ports:
+      - "3000:3000"
+      - "5173:5173"  # Vite dev server
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Exclude node_modules
+    depends_on:
+      - backend
+    networks:
+      - tru-activity-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  tru-activity-network:
+    driver: bridge

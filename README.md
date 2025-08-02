@@ -1,103 +1,58 @@
-# TRU Activity - ระบบเก็บกิจกรรมมหาวิทยาลัย
+# TRU Activity
 
-ระบบเก็บกิจกรรมมหาวิทยาลัยเทคโนโลยีราชมงคลธัญบุรี พัฒนาด้วย Go Fiber + GraphQL + PostgreSQL + SvelteKit
+ระบบเก็บกิจกรรมมหาวิทยาลัยเทคโนโลยีราชมงคลธัญบุรี
 
-## ⚡ คุณสมบัติหลัก
+Full-stack web application ที่พัฒนาด้วย Go Fiber + GraphQL + PostgreSQL + SvelteKit สำหรับจัดการกิจกรรมมหาวิทยาลัย พร้อม multi-level admin system และ role-based access control
 
-### 🔐 Authentication & Authorization
-- JWT-based authentication system
-- Multi-level admin system (Super Admin, Faculty Admin, Regular Admin)
-- Role-based access control และ permissions
-- QR secret key สำหรับ users
-
-### 🏛️ Organization Management
-- จัดการคณะ (Faculties) และภาควิชา (Departments)
-- User management พร้อม faculty/department assignments
-- Admin role assignments และ permissions
-
-### 📅 Activity Management
-- สร้าง แก้ไข และจัดการกิจกรรม
-- Activity types: Workshop, Seminar, Competition, Volunteer, Other
-- Activity status tracking: Draft, Active, Completed, Cancelled
-- Participation management พร้อม approval workflow
-- Attendance tracking และ points system
-
-### 📊 Dashboard & Analytics
-- Role-based dashboard และ navigation
-- Activity statistics และ participation metrics
-- Real-time updates ด้วย GraphQL subscriptions
-- Reports และ analytics สำหรับ admins
-
-### 💳 Subscription System
-- Subscription tracking พร้อม expiry management
-- Multiple subscription types: Basic, Premium, VIP
-- Status tracking: Active, Expired, Cancelled
-
-## 🛠️ Tech Stack
-
-### Backend
-- **Go** - Programming language
-- **Fiber v2** - High-performance web framework
-- **GraphQL** - API query language (gqlgen)
-- **PostgreSQL** - Primary database
-- **Redis** - Caching และ session management
-- **JWT** - Authentication tokens
-- **GORM** - ORM สำหรับ database operations
-
-### Frontend
-- **SvelteKit** - Full-stack framework
-- **Svelte 5** - Component framework พร้อม runes syntax
-- **TypeScript** - Type-safe JavaScript
-- **TailwindCSS** - Utility-first CSS framework
-- **shadcn-svelte** - UI component library
-- **Apollo Client** - GraphQL client
-- **Zod** - Schema validation
-
-### Infrastructure
-- **Docker Compose** - Development environment
-- **PostgreSQL** - Database container
-- **Redis** - Cache container
-- **Air** - Hot reloading สำหรับ Go development
-
-## 🚀 การติดตั้งและรัน
+## 🚀 Quick Start - Development
 
 ### Prerequisites
-- Docker และ Docker Compose
-- Node.js 24.4.1+ (สำหรับ local frontend development)
-- Go 1.24.5+ (สำหรับ local backend development)
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+- Git
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/kruakemaths/tru-activity.git
+git clone <repository-url>
 cd tru-activity
 ```
 
-### 2. Setup Environment Variables
+### 2. Start Development Environment
 ```bash
-# Backend
-cp backend/.env.example backend/.env
+# Start all services (recommended)
+./scripts/dev.sh start
 
-# Frontend (ถ้าต้องการ custom config)
-# สร้าง .env.local ใน frontend/ directory
+# Or just start backend services
+./scripts/dev.sh backend
+
+# Or start frontend only (requires backend running)
+./scripts/dev.sh frontend
 ```
 
-### 3. รันด้วย Docker Compose
+### 3. Access Applications
+- **Frontend (Vite Dev Server)**: http://localhost:5173
+- **Backend API**: http://localhost:8080
+- **GraphQL Playground**: http://localhost:8080/
+- **Database**: localhost:5432 (postgres/devpassword123)
+- **Redis**: localhost:6379
+
+### 4. Development Commands
 ```bash
-# รัน development environment
-docker-compose up -d
+# View logs
+./scripts/dev.sh logs
 
-# ดู logs
-docker-compose logs -f
+# Stop all services
+./scripts/dev.sh stop
 
-# หยุด services
-docker-compose down
+# Restart services
+./scripts/dev.sh restart
+
+# Check service status
+./scripts/dev.sh status
+
+# Reset database (deletes all data)
+./scripts/dev.sh reset-db
 ```
-
-### 4. เข้าใช้งานระบบ
-- **Frontend**: http://localhost:5173
-- **GraphQL Playground**: http://localhost:8080 (development only)
-- **API Endpoint**: http://localhost:8080/query
-- **Health Check**: http://localhost:8080/health
 
 ## 🏗️ โครงสร้างโปรเจค
 
