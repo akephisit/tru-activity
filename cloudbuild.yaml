@@ -85,22 +85,6 @@ steps:
     id: 'update-service-image'
     waitFor: ['deploy-backend']
 
-  # Fix frontend SvelteKit structure
-  - name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "Fixing frontend SvelteKit structure..."
-        # Fix health endpoint naming (SvelteKit requires +server.ts for API routes)
-        if [ -f "./frontend/src/routes/health/+page.server.ts" ]; then
-          echo "Moving health endpoint from +page.server.ts to +server.ts"
-          mv "./frontend/src/routes/health/+page.server.ts" "./frontend/src/routes/health/+server.ts"
-        fi
-        echo "Frontend structure fixed"
-    id: 'fix-frontend-structure'
-    waitFor: ['update-service-image']
-
   # Build frontend Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -112,7 +96,7 @@ steps:
       - 'gcr.io/$PROJECT_ID/tru-activity-frontend:latest'
       - './frontend'
     id: 'build-frontend'
-    waitFor: ['fix-frontend-structure']
+    waitFor: ['update-service-image']
 
   # Push frontend images
   - name: 'gcr.io/cloud-builders/docker'

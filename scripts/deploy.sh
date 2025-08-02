@@ -634,12 +634,6 @@ EOF
 deploy_frontend_standalone() {
     log_info "Deploying frontend to Cloud Run (standalone)..."
     
-    # Fix health endpoint naming (SvelteKit requires +server.ts for API routes)
-    if [ -f "./frontend/src/routes/health/+page.server.ts" ]; then
-        log_info "Moving health endpoint from +page.server.ts to +server.ts"
-        mv "./frontend/src/routes/health/+page.server.ts" "./frontend/src/routes/health/+server.ts"
-    fi
-    
     # Build and deploy using Cloud Build
     gcloud builds submit \
         --config=frontend/cloudbuild.yaml \
