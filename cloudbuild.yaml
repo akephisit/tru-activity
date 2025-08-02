@@ -13,7 +13,8 @@ steps:
         gcloud services enable run.googleapis.com sqladmin.googleapis.com redis.googleapis.com \
           cloudbuild.googleapis.com secretmanager.googleapis.com monitoring.googleapis.com \
           logging.googleapis.com cloudtrace.googleapis.com vpcaccess.googleapis.com \
-          servicenetworking.googleapis.com compute.googleapis.com
+          servicenetworking.googleapis.com compute.googleapis.com \
+          cloudresourcemanager.googleapis.com
         
         # Create Cloud SQL instance if not exists
         if ! gcloud sql instances describe tru-activity-db &>/dev/null; then
@@ -97,23 +98,23 @@ steps:
         
         # Grant Cloud Build service account necessary permissions
         echo "Setting up Cloud Build service account permissions..."
-        local project_number=$$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
-        local cloudbuild_sa="$$project_number-compute@developer.gserviceaccount.com"
-        echo "Cloud Build SA: $$cloudbuild_sa"
+        PROJECT_NUMBER=$$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
+        CLOUDBUILD_SA="$$PROJECT_NUMBER-compute@developer.gserviceaccount.com"
+        echo "Cloud Build SA: $$CLOUDBUILD_SA"
         
         # Grant IAM service account user permission (to impersonate other SAs)
         gcloud projects add-iam-policy-binding $PROJECT_ID \
-          --member="serviceAccount:$$cloudbuild_sa" \
+          --member="serviceAccount:$$CLOUDBUILD_SA" \
           --role="roles/iam.serviceAccountUser" --quiet || true
         
         # Grant Cloud Run admin permission (to deploy services)
         gcloud projects add-iam-policy-binding $PROJECT_ID \
-          --member="serviceAccount:$$cloudbuild_sa" \
+          --member="serviceAccount:$$CLOUDBUILD_SA" \
           --role="roles/run.admin" --quiet || true
         
         # Grant compute admin for VPC access
         gcloud projects add-iam-policy-binding $PROJECT_ID \
-          --member="serviceAccount:$$cloudbuild_sa" \
+          --member="serviceAccount:$$CLOUDBUILD_SA" \
           --role="roles/compute.admin" --quiet || true
         
         # Create secrets with values from substitution variables
