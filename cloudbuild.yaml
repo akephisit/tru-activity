@@ -227,7 +227,7 @@ steps:
       - 'gcr.io/$PROJECT_ID/tru-activity-backend:latest'
       - './backend'
     id: 'build-backend'
-    waitFor: ['update-backend-service-yaml']
+    waitFor: ['validate-context']
 
   # Push backend images
   - name: 'gcr.io/cloud-builders/docker'
@@ -264,17 +264,52 @@ steps:
 
   # Deploy to Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
     args:
-      - 'run'
-      - 'services'
-      - 'replace'
-      - '/tmp/backend-service.yaml'
-      - '--region=$_REGION'
+      - '-c'
+      - |
+        set -e
+        echo "Preparing backend service.yaml for deployment..."
+        
+        # Get Redis IP
+        REDIS_IP=$$(gcloud redis instances describe tru-activity-redis --region=$_REGION --format="value(host)" 2>/dev/null || echo "10.0.0.1")
+        
+        # Get Cloud SQL public IP
+        SQL_IP=$$(gcloud sql instances describe tru-activity-db --format="value(ipAddresses[0].ipAddress)" 2>/dev/null || echo "127.0.0.1")
+        
+        echo "Redis IP: $$REDIS_IP"
+        echo "SQL IP: $$SQL_IP"
+        
+        # Create a copy and update backend service.yaml with actual values
+        cp backend/service.yaml /tmp/backend-service.yaml
+        
+        # Replace any project ID patterns
+        sed -i "s/tru-activity-[0-9]*/$PROJECT_ID/g" /tmp/backend-service.yaml
+        
+        # Replace region patterns  
+        sed -i "s/asia-southeast[0-9]*/$_REGION/g" /tmp/backend-service.yaml
+        
+        # Replace Redis IP (look for any private IP in 10.x.x.x range)
+        sed -i "s/10\.[0-9]*\.[0-9]*\.[0-9]*/$$REDIS_IP/g" /tmp/backend-service.yaml
+        
+        # Replace SQL IP (look for any public IP pattern)
+        sed -i "/DB_HOST/s/[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*/$$SQL_IP/" /tmp/backend-service.yaml
+        
+        # Show what we're deploying
+        echo "=== Backend service.yaml that will be deployed ==="
+        cat /tmp/backend-service.yaml
+        echo "=================================================="
+        
+        # Deploy the service
+        echo "Deploying backend service..."
+        gcloud run services replace /tmp/backend-service.yaml --region=$_REGION
+        
+        echo "✅ Backend deployment completed"
     env:
       - 'PROJECT_ID=$PROJECT_ID'
       - 'REGION=$_REGION'
     id: 'deploy-backend'
-    waitFor: ['run-migrations', 'update-backend-service-yaml']
+    waitFor: ['run-migrations']
 
   # Update service YAML with new image
   - name: 'gcr.io/cloud-builders/gcloud'
