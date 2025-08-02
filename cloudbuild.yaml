@@ -95,6 +95,27 @@ steps:
           echo "Backend service account already exists"
         fi
         
+        # Grant Cloud Build service account necessary permissions
+        echo "Setting up Cloud Build service account permissions..."
+        local project_number=$$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
+        local cloudbuild_sa="$$project_number-compute@developer.gserviceaccount.com"
+        echo "Cloud Build SA: $$cloudbuild_sa"
+        
+        # Grant IAM service account user permission (to impersonate other SAs)
+        gcloud projects add-iam-policy-binding $PROJECT_ID \
+          --member="serviceAccount:$$cloudbuild_sa" \
+          --role="roles/iam.serviceAccountUser" --quiet || true
+        
+        # Grant Cloud Run admin permission (to deploy services)
+        gcloud projects add-iam-policy-binding $PROJECT_ID \
+          --member="serviceAccount:$$cloudbuild_sa" \
+          --role="roles/run.admin" --quiet || true
+        
+        # Grant compute admin for VPC access
+        gcloud projects add-iam-policy-binding $PROJECT_ID \
+          --member="serviceAccount:$$cloudbuild_sa" \
+          --role="roles/compute.admin" --quiet || true
+        
         # Create secrets with values from substitution variables
         echo "Setting up secrets with provided values..."
         if ! gcloud secrets describe db-password &>/dev/null; then
@@ -165,18 +186,25 @@ steps:
         echo "Redis IP: $$REDIS_IP"
         echo "SQL IP: $$SQL_IP"
         
-        # Update backend service.yaml with actual values
-        # Replace any project ID patterns
-        sed -i "s/tru-activity-[0-9]*/$PROJECT_ID/g" backend/service.yaml
+        # Create a copy and update backend service.yaml with actual values
+        cp backend/service.yaml /tmp/backend-service.yaml
         
-        # Replace region patterns
-        sed -i "s/asia-southeast[0-9]*/$_REGION/g" backend/service.yaml
+        # Replace any project ID patterns
+        sed -i "s/tru-activity-[0-9]*/$PROJECT_ID/g" /tmp/backend-service.yaml
+        
+        # Replace region patterns  
+        sed -i "s/asia-southeast[0-9]*/$_REGION/g" /tmp/backend-service.yaml
         
         # Replace Redis IP (look for any private IP in 10.x.x.x range)
-        sed -i "s/10\.[0-9]*\.[0-9]*\.[0-9]*/$$REDIS_IP/g" backend/service.yaml
+        sed -i "s/10\.[0-9]*\.[0-9]*\.[0-9]*/$$REDIS_IP/g" /tmp/backend-service.yaml
         
         # Replace SQL IP (look for any public IP pattern)
-        sed -i "/DB_HOST/s/[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*/$$SQL_IP/" backend/service.yaml
+        sed -i "/DB_HOST/s/[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*/$$SQL_IP/" /tmp/backend-service.yaml
+        
+        # Show what we're deploying
+        echo "=== Backend service.yaml that will be deployed ==="
+        cat /tmp/backend-service.yaml
+        echo "=================================================="
         
         echo "✅ Backend service.yaml updated"
     id: 'update-backend-service-yaml'
@@ -234,13 +262,13 @@ steps:
       - 'run'
       - 'services'
       - 'replace'
-      - 'backend/service.yaml'
+      - '/tmp/backend-service.yaml'
       - '--region=$_REGION'
     env:
       - 'PROJECT_ID=$PROJECT_ID'
       - 'REGION=$_REGION'
     id: 'deploy-backend'
-    waitFor: ['run-migrations']
+    waitFor: ['run-migrations', 'update-backend-service-yaml']
 
   # Update service YAML with new image
   - name: 'gcr.io/cloud-builders/gcloud'
