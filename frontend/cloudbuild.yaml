@@ -51,6 +51,21 @@ steps:
       - '--set-env-vars'
       - 'NODE_ENV=production'
 
+  # Set IAM policy for public access
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'add-iam-policy-binding'
+      - 'tru-activity-frontend'
+      - '--region'
+      - '$_REGION'
+      - '--member'
+      - 'allUsers'
+      - '--role'
+      - 'roles/run.invoker'
+
 # Store images in Container Registry
 images:
   - 'gcr.io/$PROJECT_ID/tru-activity-frontend:$BUILD_ID'
