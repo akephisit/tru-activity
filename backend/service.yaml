@@ -5,7 +5,6 @@ metadata:
   annotations:
     run.googleapis.com/ingress: all
     run.googleapis.com/allow-unauthenticated: "true"
-    run.googleapis.com/allow-unauthenticated: "true"
 spec:
   template:
     metadata:
@@ -25,60 +24,60 @@ spec:
       serviceAccountName: tru-activity-backend@tru-activity-467606.iam.gserviceaccount.com
       containerConcurrency: 80
       containers:
-      - image: gcr.io/tru-activity-467606/tru-activity-backend:latest
-        ports:
-        - name: http1
-          containerPort: 8080
-        env:
-        - name: ENV
-          value: "production"
-        - name: DB_HOST
-          value: "35.185.188.104"
-        - name: DB_PORT
-          value: "5432"
-        - name: DB_NAME
-          value: "tru_activity_prod"
-        - name: DB_USER
-          value: "postgres"
-        - name: DB_SSLMODE
-          value: "require"
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-password
-              key: latest
-        - name: REDIS_HOST
-          value: "10.187.238.107"
-        - name: REDIS_PORT
-          value: "6379"
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: jwt-secret
-              key: latest
-        - name: CORS_ORIGINS
-          value: "https://tru-activity-frontend-tru-activity-467606-asia-southeast1.a.run.app"
-        - name: NOTIFICATION_EMAIL_FROM
-          value: "noreply@yourdomain.com"
-        - name: SENDGRID_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: sendgrid-api-key
-              key: latest
-        - name: QR_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: qr-secret
-              key: latest
-        resources:
-          limits:
-            cpu: "2"
-            memory: "2Gi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 30
-          timeoutSeconds: 10
-          failureThreshold: 3
+        - image: gcr.io/tru-activity-467606/tru-activity-backend:latest
+          ports:
+            - name: http1
+              containerPort: 8080
+          env:
+            - name: ENV
+              value: "production"
+            - name: DB_HOST
+              value: "35.185.188.104"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "tru_activity_prod"
+            - name: DB_USER
+              value: "postgres"
+            - name: DB_SSLMODE
+              value: "require"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-password
+                  key: latest
+            - name: REDIS_HOST
+              value: "10.187.238.107"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: latest
+            - name: CORS_ORIGINS
+              value: "https://tru-activity-frontend-tru-activity-467606-asia-southeast1.a.run.app"
+            - name: NOTIFICATION_EMAIL_FROM
+              value: "noreply@yourdomain.com"
+            - name: SENDGRID_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sendgrid-api-key
+                  key: latest
+            - name: QR_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qr-secret
+                  key: latest
+          resources:
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
