@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { client } from '$lib/graphql/client';
-  import { gql } from '@apollo/client/core';
+  import { gql } from 'graphql-tag';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -121,15 +121,16 @@
 
   async function loadActivities() {
     try {
-      const result = await client.query({
-        query: MY_ACTIVITIES_QUERY,
-        fetchPolicy: 'network-only'
-      });
+      const result = await client.query(MY_ACTIVITIES_QUERY, {}).toPromise();
 
-      activities = result.data.myActivityAssignments
-        .filter((assignment: any) => assignment.canScanQR)
-        .map((assignment: any) => assignment.activity)
-        .filter((activity: any) => activity.qrCodeRequired && activity.status === 'ACTIVE');
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      activities = result.data?.myActivityAssignments
+        ?.filter((assignment: any) => assignment.canScanQR)
+        ?.map((assignment: any) => assignment.activity)
+        ?.filter((activity: any) => activity.qrCodeRequired && activity.status === 'ACTIVE') || [];
     } catch (err: any) {
       error = err.message || 'Failed to load activities';
       console.error('Activities error:', err);
@@ -216,18 +217,15 @@
       error = '';
       scanResult = null;
 
-      const result = await client.mutate({
-        mutation: SCAN_QR_MUTATION,
-        variables: {
-          input: {
-            qrData: dataToScan,
-            activityID: selectedActivityId,
-            scanLocation: scanLocation || 'Mobile Scanner'
-          }
+      const result = await client.mutation(SCAN_QR_MUTATION, {
+        input: {
+          qrData: dataToScan,
+          activityID: selectedActivityId,
+          scanLocation: scanLocation || 'Mobile Scanner'
         }
-      });
+      }).toPromise();
 
-      scanResult = result.data.scanQRCode;
+      scanResult = result.data?.scanQRCode;
       
       if (scanResult?.success) {
         // Clear input for next scan

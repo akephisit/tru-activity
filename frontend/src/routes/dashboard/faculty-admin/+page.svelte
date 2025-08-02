@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { client } from '$lib/graphql/client';
-  import { gql } from '@apollo/client/core';
+  import { gql } from 'graphql-tag';
   import { user } from '$lib/stores/auth';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
@@ -141,17 +141,14 @@
       loading = true;
       error = '';
 
-      const result = await client.query({
-        query: FACULTY_DASHBOARD_QUERY,
-        variables: {
-          facultyId: $user.faculty.id
-        }
-      });
+      const result = await client.query(FACULTY_DASHBOARD_QUERY, {
+        facultyId: $user.faculty.id
+      }).toPromise();
 
-      facultyStats = result.data.facultyStats;
-      activities = result.data.facultyActivities;
-      students = result.data.facultyStudents;
-      regularAdmins = result.data.facultyRegularAdmins;
+      facultyStats = result.data?.facultyStats;
+      activities = result.data?.facultyActivities;
+      students = result.data?.facultyStudents;
+      regularAdmins = result.data?.facultyRegularAdmins;
     } catch (err: any) {
       error = err.message || 'Failed to load faculty dashboard data';
       console.error('Faculty dashboard error:', err);

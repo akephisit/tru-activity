@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { client } from '$lib/graphql/client';
-  import { gql } from '@apollo/client/core';
+  import { gql } from 'graphql-tag';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
@@ -116,23 +116,15 @@
       error = '';
 
       const [systemResult, subscriptionsResult, facultyResult] = await Promise.all([
-        client.query({
-          query: SYSTEM_METRICS_QUERY,
-          variables: {
-            fromDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            toDate: new Date().toISOString()
-          }
-        }),
-        client.query({
-          query: SUBSCRIPTIONS_QUERY
-        }),
-        client.query({
-          query: FACULTY_METRICS_QUERY,
-          variables: {
-            fromDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            toDate: new Date().toISOString()
-          }
-        })
+        client.query(SYSTEM_METRICS_QUERY, {
+          fromDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          toDate: new Date().toISOString()
+        }).toPromise(),
+        client.query(SUBSCRIPTIONS_QUERY, {}).toPromise(),
+        client.query(FACULTY_METRICS_QUERY, {
+          fromDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          toDate: new Date().toISOString()
+        }).toPromise()
       ]);
 
       systemMetrics = systemResult.data.systemMetrics;

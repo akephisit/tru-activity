@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { client } from '$lib/graphql/client';
-  import { gql } from '@apollo/client/core';
+  import { gql } from 'graphql-tag';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';
@@ -110,7 +110,7 @@
         fetchPolicy: 'network-only'
       });
 
-      subscriptions = result.data.subscriptions;
+      subscriptions = result.data?.subscriptions;
     } catch (err: any) {
       error = err.message || 'Failed to load subscriptions';
       console.error('Subscriptions error:', err);
@@ -126,7 +126,7 @@
         fetchPolicy: 'network-only'
       });
 
-      faculties = result.data.faculties;
+      faculties = result.data?.faculties;
     } catch (err: any) {
       console.error('Faculties error:', err);
     }

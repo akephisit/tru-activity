@@ -34,7 +34,7 @@
 			});
 
 			if (result.data?.login) {
-				const { token, user } = result.data.login;
+				const { token, user } = result.data?.login;
 				authStore.login(token, user);
 				toast.success(`ยินดีต้อนรับ ${user.firstName} ${user.lastName}`);
 				goto('/dashboard');

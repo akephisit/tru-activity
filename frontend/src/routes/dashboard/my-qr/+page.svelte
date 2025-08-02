@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { client } from '$lib/graphql/client';
-  import { gql } from '@apollo/client/core';
+  import { gql } from 'graphql-tag';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';
@@ -69,7 +69,7 @@
         fetchPolicy: 'network-only'
       });
 
-      qrData = result.data.myQRData;
+      qrData = result.data?.myQRData;
       await generateQRCodeImage();
     } catch (err: any) {
       error = err.message || 'Failed to load QR data';
@@ -92,7 +92,7 @@
         mutation: REFRESH_QR_MUTATION
       });
 
-      qrData = result.data.refreshMyQRSecret;
+      qrData = result.data?.refreshMyQRSecret;
       await generateQRCodeImage();
     } catch (err: any) {
       error = err.message || 'Failed to refresh QR secret';

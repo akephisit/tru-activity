@@ -57,11 +57,9 @@
 
 	async function loadUserData() {
 		try {
-			const result = await client.query({
-				query: GET_ME
-			});
+			const result = await client.query(GET_ME, {}).toPromise();
 			if (result.data?.me) {
-				authStore.updateUser(result.data.me);
+				authStore.updateUser(result.data?.me);
 			}
 		} catch (error) {
 			console.error('Failed to load user data:', error);

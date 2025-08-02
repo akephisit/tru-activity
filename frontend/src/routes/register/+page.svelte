@@ -35,11 +35,9 @@
 	async function loadFaculties() {
 		try {
 			facultiesLoading = true;
-			const result = await client.query({
-				query: GET_FACULTIES
-			});
+			const result = await client.query(GET_FACULTIES, {}).toPromise();
 			if (result.data?.faculties) {
-				faculties = result.data.faculties;
+				faculties = result.data?.faculties;
 			}
 		} catch (error) {
 			console.error('Failed to load faculties:', error);
@@ -69,23 +67,20 @@
 		isLoading = true;
 		
 		try {
-			const result = await client.mutate({
-				mutation: REGISTER_MUTATION,
-				variables: {
-					input: {
-						studentID,
-						email,
-						firstName,
-						lastName,
-						password,
-						facultyID: selectedFaculty,
-						departmentID: selectedDepartment
-					}
+			const result = await client.mutation(REGISTER_MUTATION, {
+				input: {
+					studentID,
+					email,
+					firstName,
+					lastName,
+					password,
+					facultyID: selectedFaculty,
+					departmentID: selectedDepartment
 				}
-			});
+			}).toPromise();
 
 			if (result.data?.register) {
-				const { token, user } = result.data.register;
+				const { token, user } = result.data?.register;
 				authStore.login(token, user);
 				toast.success(`สมัครสมาชิกสำเร็จ ยินดีต้อนรับ ${user.firstName} ${user.lastName}`);
 				goto('/dashboard');

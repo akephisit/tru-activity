@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { client } from '$lib/graphql/client';
-  import { gql } from '@apollo/client/core';
+  import { gql } from 'graphql-tag';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
@@ -129,8 +129,8 @@
         fetchPolicy: 'network-only'
       });
 
-      participations = result.data.myParticipations;
-      activityStats = result.data.myActivityStats;
+      participations = result.data?.myParticipations;
+      activityStats = result.data?.myActivityStats;
     } catch (err: any) {
       error = err.message || 'Failed to load participations';
       console.error('Participations error:', err);

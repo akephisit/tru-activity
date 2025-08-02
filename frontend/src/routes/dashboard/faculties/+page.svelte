@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { client } from '$lib/graphql/client';
-  import { gql } from '@apollo/client/core';
+  import { gql } from 'graphql-tag';
   import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -113,7 +113,7 @@
         fetchPolicy: 'network-only'
       });
 
-      faculties = result.data.faculties;
+      faculties = result.data?.faculties;
     } catch (err: any) {
       error = err.message || 'Failed to load faculties';
       console.error('Faculties error:', err);
