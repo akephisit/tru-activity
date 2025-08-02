@@ -132,6 +132,8 @@ show_usage() {
     echo "  infrastructure    Deploy infrastructure only"
     echo "  backend           Deploy backend only"
     echo "  frontend          Deploy frontend only"
+    echo "  trigger           Use GitHub triggers for fast deployment"
+    echo "  setup-triggers    Setup GitHub integration and triggers"
     echo "  health            Run health checks only"
     echo "  monitoring        Setup monitoring only"
     echo "  cleanup           Cleanup temporary files"
@@ -769,6 +771,84 @@ reset_database() {
     log_success "🔄 Database has been reset! Fresh start with clean data."
 }
 
+# Deploy using Cloud Build Triggers (faster)
+deploy_with_trigger() {
+    log_info "🚀 Deploying using Cloud Build Triggers (GitHub integration)..."
+    
+    # Check if in git repository
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        log_error "Not in a git repository. Triggers require GitHub integration."
+        log_info "Use 'deploy' command for traditional deployment."
+        return 1
+    fi
+    
+    # Check current branch
+    local current_branch=$(git branch --show-current)
+    log_info "Current branch: $current_branch"
+    
+    # Determine trigger type
+    if [[ "$current_branch" == "main" ]]; then
+        log_info "Triggering full stack deployment..."
+        trigger_name="tru-activity-main-deploy"
+    elif [[ "$current_branch" == frontend-* ]]; then
+        log_info "Triggering frontend-only deployment..."
+        trigger_name="tru-activity-frontend-deploy"
+    elif [[ "$current_branch" == backend-* ]]; then
+        log_info "Triggering backend-only deployment..."
+        trigger_name="tru-activity-backend-deploy"
+    else
+        log_warning "Branch '$current_branch' doesn't match trigger patterns."
+        log_info "Trigger patterns:"
+        log_info "  - 'main': Full stack deployment"
+        log_info "  - 'frontend-*': Frontend only"
+        log_info "  - 'backend-*': Backend only"
+        read -p "Proceed with manual trigger? [y/N]: " proceed
+        if [[ "$proceed" != "y" && "$proceed" != "Y" ]]; then
+            log_info "Deployment cancelled"
+            return 0
+        fi
+        trigger_name="tru-activity-main-deploy"
+    fi
+    
+    # Commit changes if any
+    if ! git diff-index --quiet HEAD --; then
+        log_warning "You have uncommitted changes."
+        read -p "Commit and push changes? [y/N]: " commit_changes
+        if [[ "$commit_changes" == "y" || "$commit_changes" == "Y" ]]; then
+            read -p "Enter commit message: " commit_msg
+            git add .
+            git commit -m "$commit_msg"
+        else
+            log_warning "Deploying without latest changes"
+        fi
+    fi
+    
+    # Push to trigger build
+    log_info "Pushing to GitHub to trigger build..."
+    git push origin "$current_branch"
+    
+    # Monitor the build
+    log_info "Monitoring build progress..."
+    log_info "You can also view progress at: https://console.cloud.google.com/cloud-build/builds"
+    
+    # Wait a moment for trigger to start
+    sleep 5
+    
+    # Get latest build
+    local build_id=$(gcloud builds list --limit=1 --filter="trigger.name:$trigger_name" --format="value(id)" 2>/dev/null || echo "")
+    
+    if [ -n "$build_id" ]; then
+        log_info "Build ID: $build_id"
+        log_info "Following build logs..."
+        gcloud builds log --stream "$build_id" || true
+    else
+        log_warning "Could not get build ID. Check Cloud Console for progress."
+    fi
+    
+    log_success "🎉 Trigger-based deployment initiated!"
+    log_info "View details: https://console.cloud.google.com/cloud-build/builds"
+}
+
 # Clean deployment (destroy and redeploy)
 clean_deploy() {
     log_info "🧹 Clean deployment: Destroying everything and redeploying..."
@@ -913,6 +993,15 @@ case "$COMMAND" in
         auth_gcloud
         enable_apis
         clean_deploy
+        ;;
+    "trigger")
+        check_dependencies
+        load_config
+        auth_gcloud
+        deploy_with_trigger
+        ;;
+    "setup-triggers")
+        scripts/setup-triggers.sh
         ;;
     *)
         show_usage
