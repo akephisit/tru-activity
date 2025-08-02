@@ -8,7 +8,6 @@ steps:
       - '-t'
       - 'gcr.io/$PROJECT_ID/tru-activity-frontend:latest'
       - '.'
-    dir: 'frontend'
 
   # Push the image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
