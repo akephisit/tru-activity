@@ -547,23 +547,98 @@ enable_apis() {
     log_success "APIs enabled successfully"
 }
 
-# Build and deploy backend
-deploy_backend() {
-    log_info "Deploying backend with Cloud Build..."
+# Build and deploy both backend and frontend
+deploy_full_stack() {
+    log_info "Deploying full stack (backend + frontend) with Cloud Build..."
     
-    # Trigger Cloud Build
+    # Trigger unified Cloud Build that includes both backend and frontend
     gcloud builds submit \
         --config=cloudbuild.yaml \
         --substitutions=_REGION="$REGION" \
         --project="$PROJECT_ID" \
         .
     
+    log_success "Full stack deployed successfully"
+}
+
+# Build and deploy backend only (for compatibility)
+deploy_backend() {
+    log_info "Deploying backend only..."
+    log_warning "Note: This only deploys backend. Use 'deploy' command for full stack deployment."
+    
+    # Create temporary cloudbuild for backend only
+    cat > /tmp/cloudbuild-backend-only.yaml << EOF
+steps:
+  # Build backend Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--no-cache'
+      - '-t'
+      - 'gcr.io/\$PROJECT_ID/tru-activity-backend:\$BUILD_ID'
+      - '-t'
+      - 'gcr.io/\$PROJECT_ID/tru-activity-backend:latest'
+      - './backend'
+    id: 'build-backend'
+
+  # Push backend images
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/\$PROJECT_ID/tru-activity-backend:\$BUILD_ID'
+    id: 'push-backend'
+    waitFor: ['build-backend']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'replace'
+      - 'backend/service.yaml'
+      - '--region=\$_REGION'
+    id: 'deploy-backend'
+    waitFor: ['push-backend']
+
+  # Update service image
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run services update tru-activity-backend \\
+          --image=gcr.io/\$PROJECT_ID/tru-activity-backend:\$BUILD_ID \\
+          --region=\$_REGION
+    id: 'update-service-image'
+    waitFor: ['deploy-backend']
+
+substitutions:
+  _REGION: '$REGION'
+timeout: '1200s'
+EOF
+
+    # Deploy backend only
+    gcloud builds submit \
+        --config=/tmp/cloudbuild-backend-only.yaml \
+        --substitutions=_REGION="$REGION" \
+        --project="$PROJECT_ID" \
+        .
+    
+    # Cleanup temp file
+    rm -f /tmp/cloudbuild-backend-only.yaml
+    
     log_success "Backend deployed successfully"
 }
 
-# Deploy frontend to Cloud Run
-deploy_frontend() {
-    log_info "Deploying frontend to Cloud Run..."
+# Deploy frontend to Cloud Run (standalone)
+deploy_frontend_standalone() {
+    log_info "Deploying frontend to Cloud Run (standalone)..."
+    
+    # Fix health endpoint naming (SvelteKit requires +server.ts for API routes)
+    if [ -f "./frontend/src/routes/health/+page.server.ts" ]; then
+        log_info "Moving health endpoint from +page.server.ts to +server.ts"
+        mv "./frontend/src/routes/health/+page.server.ts" "./frontend/src/routes/health/+server.ts"
+    fi
     
     # Build and deploy using Cloud Build
     gcloud builds submit \
@@ -749,8 +824,7 @@ main() {
     setup_infrastructure
     setup_service_accounts  
     update_service_yaml
-    deploy_backend
-    deploy_frontend
+    deploy_full_stack
     
     sleep 10  # Give services time to start
     health_check
@@ -798,7 +872,8 @@ case "$COMMAND" in
     "frontend")
         check_dependencies
         load_config
-        deploy_frontend
+        auth_gcloud
+        deploy_frontend_standalone
         ;;
     "health")
         check_dependencies
