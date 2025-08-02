@@ -166,6 +166,25 @@ steps:
           echo -n "$_SENDGRID_API_KEY" | gcloud secrets versions add sendgrid-api-key --data-file=-
         fi
         
+        # Grant Secret Manager permissions to backend service account
+        echo "Granting Secret Manager permissions to backend service account..."
+        
+        gcloud secrets add-iam-policy-binding db-password \
+          --member="serviceAccount:tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com" \
+          --role="roles/secretmanager.secretAccessor" --quiet || echo "Note: db-password permission grant failed"
+        
+        gcloud secrets add-iam-policy-binding jwt-secret \
+          --member="serviceAccount:tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com" \
+          --role="roles/secretmanager.secretAccessor" --quiet || echo "Note: jwt-secret permission grant failed"
+        
+        gcloud secrets add-iam-policy-binding qr-secret \
+          --member="serviceAccount:tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com" \
+          --role="roles/secretmanager.secretAccessor" --quiet || echo "Note: qr-secret permission grant failed"
+        
+        gcloud secrets add-iam-policy-binding sendgrid-api-key \
+          --member="serviceAccount:tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com" \
+          --role="roles/secretmanager.secretAccessor" --quiet || echo "Note: sendgrid-api-key permission grant failed"
+        
         echo "✅ Infrastructure setup completed"
     id: 'setup-infrastructure'
 
