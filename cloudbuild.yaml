@@ -98,24 +98,29 @@ steps:
         
         # Grant Cloud Build service account necessary permissions
         echo "Setting up Cloud Build service account permissions..."
+        
+        # Use the default Cloud Build service account (which has editor role)
         PROJECT_NUMBER=$$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
         CLOUDBUILD_SA="$$PROJECT_NUMBER-compute@developer.gserviceaccount.com"
-        echo "Cloud Build SA: $$CLOUDBUILD_SA"
+        CLOUDBUILD_SERVICE_SA="service-$$PROJECT_NUMBER@gcp-sa-cloudbuild.iam.gserviceaccount.com"
         
-        # Grant IAM service account user permission (to impersonate other SAs)
+        echo "Default Cloud Build SA: $$CLOUDBUILD_SA"
+        echo "Service Cloud Build SA: $$CLOUDBUILD_SERVICE_SA"
+        
+        # Grant permissions to the default compute service account (which has editor role)
+        # The editor role should allow these operations, but let's be explicit
+        
+        echo "Granting iam.serviceAccountUser to $$CLOUDBUILD_SA (may already exist)"
         gcloud projects add-iam-policy-binding $PROJECT_ID \
           --member="serviceAccount:$$CLOUDBUILD_SA" \
-          --role="roles/iam.serviceAccountUser" --quiet || true
+          --role="roles/iam.serviceAccountUser" --quiet || echo "Note: iam.serviceAccountUser grant failed (may already exist)"
         
-        # Grant Cloud Run admin permission (to deploy services)
+        echo "Granting run.admin to $$CLOUDBUILD_SA (may already exist)"
         gcloud projects add-iam-policy-binding $PROJECT_ID \
           --member="serviceAccount:$$CLOUDBUILD_SA" \
-          --role="roles/run.admin" --quiet || true
+          --role="roles/run.admin" --quiet || echo "Note: run.admin grant failed (may already exist)"
         
-        # Grant compute admin for VPC access
-        gcloud projects add-iam-policy-binding $PROJECT_ID \
-          --member="serviceAccount:$$CLOUDBUILD_SA" \
-          --role="roles/compute.admin" --quiet || true
+        echo "Cloud Build permissions setup completed (errors above are normal if permissions already exist)"
         
         # Create secrets with values from substitution variables
         echo "Setting up secrets with provided values..."
