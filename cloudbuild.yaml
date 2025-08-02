@@ -151,7 +151,7 @@ steps:
         
         # Create frontend service.yaml with actual backend URL
         sed -e "s/\$PROJECT_ID/$PROJECT_ID/g" \
-            -e "s|\$_BACKEND_URL|$BACKEND_URL|g" \
+            -e "s|BACKEND_URL_PLACEHOLDER|$BACKEND_URL|g" \
             frontend/service.yaml > /tmp/frontend-service.yaml
         
         # Show the resulting configuration for verification
