@@ -183,6 +183,7 @@ options:
 substitutions:
   _REGION: 'asia-southeast1'
   _HASH: '${COMMIT_SHA:0:7}'
+  _PROJECT_ID: '$PROJECT_ID'
 
 # Tags for organization
 tags:

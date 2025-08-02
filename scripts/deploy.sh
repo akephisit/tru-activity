@@ -518,15 +518,8 @@ update_service_yaml() {
     cp /tmp/service.yaml.tmp backend/service.yaml
     rm /tmp/service.yaml.tmp
     
-    # Update frontend service.yaml with project values
-    sed -e "s/PROJECT_ID/$PROJECT_ID/g" \
-        frontend/service.yaml > /tmp/frontend-service.yaml.tmp
-    
-    # Replace the original with updated version
-    cp /tmp/frontend-service.yaml.tmp frontend/service.yaml
-    rm /tmp/frontend-service.yaml.tmp
-    
-    log_success "Service.yaml files updated successfully"
+    log_success "Backend service.yaml updated successfully"
+    log_info "Frontend service.yaml uses Cloud Build substitutions"
 }
 
 # Enable required APIs
