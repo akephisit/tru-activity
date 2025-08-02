@@ -120,6 +120,13 @@ steps:
           --member="serviceAccount:$$CLOUDBUILD_SA" \
           --role="roles/run.admin" --quiet || echo "Note: run.admin grant failed (may already exist)"
         
+        # Grant permission to act as backend service account
+        echo "Granting actAs permission for backend service account..."
+        gcloud iam service-accounts add-iam-policy-binding \
+          tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com \
+          --member="serviceAccount:$$CLOUDBUILD_SA" \
+          --role="roles/iam.serviceAccountUser" --quiet || echo "Note: backend SA actAs permission grant failed (may already exist)"
+        
         echo "Cloud Build permissions setup completed (errors above are normal if permissions already exist)"
         
         # Create secrets with values from substitution variables
@@ -283,17 +290,17 @@ steps:
         # Create a copy and update backend service.yaml with actual values
         cp backend/service.yaml /tmp/backend-service.yaml
         
-        # Replace any project ID patterns
-        sed -i "s/tru-activity-[0-9]*/$PROJECT_ID/g" /tmp/backend-service.yaml
+        # Replace project ID everywhere (specific hardcoded values)
+        sed -i "s/tru-activity-467606/$PROJECT_ID/g" /tmp/backend-service.yaml
         
-        # Replace region patterns  
-        sed -i "s/asia-southeast[0-9]*/$_REGION/g" /tmp/backend-service.yaml
+        # Replace region 
+        sed -i "s/asia-southeast1/$_REGION/g" /tmp/backend-service.yaml
         
-        # Replace Redis IP (look for any private IP in 10.x.x.x range)
-        sed -i "s/10\.[0-9]*\.[0-9]*\.[0-9]*/$$REDIS_IP/g" /tmp/backend-service.yaml
+        # Replace Redis IP (specific IP)
+        sed -i "s/10\.187\.238\.107/$$REDIS_IP/g" /tmp/backend-service.yaml
         
-        # Replace SQL IP (look for any public IP pattern)
-        sed -i "/DB_HOST/s/[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*/$$SQL_IP/" /tmp/backend-service.yaml
+        # Replace SQL IP (specific IP)
+        sed -i "s/35\.185\.188\.104/$$SQL_IP/g" /tmp/backend-service.yaml
         
         # Show what we're deploying
         echo "=== Backend service.yaml that will be deployed ==="
