@@ -103,4 +103,4 @@ temp/
 
 # TRU Activity specific
 nginx.conf
-Dockerfile.dev
+# Dockerfile.dev
