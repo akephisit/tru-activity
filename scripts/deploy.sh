@@ -837,9 +837,18 @@ main() {
     # Services are now public via service.yaml annotations
     log_info "Services are configured as public via service.yaml allow-unauthenticated annotations"
     
+    # Get actual service URLs
+    local backend_url=$(gcloud run services describe tru-activity-backend \
+        --region="$REGION" \
+        --format="value(status.url)" 2>/dev/null) || "Not available"
+    
+    local frontend_url=$(gcloud run services describe tru-activity-frontend \
+        --region="$REGION" \
+        --format="value(status.url)" 2>/dev/null) || "Not available"
+    
     log_success "🎉 TRU Activity deployed successfully!"
-    log_info "Backend URL: https://$BACKEND_SERVICE_NAME-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
-    log_info "Frontend URL: https://tru-activity-frontend-$(echo $PROJECT_ID | sed 's/-//g')-$REGION.a.run.app"
+    log_info "Backend URL: $backend_url"
+    log_info "Frontend URL: $frontend_url"
     log_info "Monitoring Dashboard: https://console.cloud.google.com/monitoring/dashboards"
 }
 
