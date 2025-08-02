@@ -324,7 +324,7 @@ steps:
     id: 'deploy-backend'
     waitFor: ['run-migrations']
 
-  # Update service YAML with new image
+  # Update service YAML with new image and set IAM policy
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
@@ -333,6 +333,8 @@ steps:
         gcloud run services update tru-activity-backend \
           --image=gcr.io/$PROJECT_ID/tru-activity-backend:$BUILD_ID \
           --region=$_REGION
+        
+        # Public access is configured via service.yaml annotation
     id: 'update-service-image'
     waitFor: ['deploy-backend']
 
@@ -420,7 +422,7 @@ steps:
     id: 'deploy-frontend'
     waitFor: ['push-frontend-sha', 'update-service-image']
 
-  # Update frontend service with new image
+  # Update frontend service with new image and set IAM policy
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
@@ -429,6 +431,8 @@ steps:
         gcloud run services update tru-activity-frontend \
           --image=gcr.io/$PROJECT_ID/tru-activity-frontend:$BUILD_ID \
           --region=$_REGION
+        
+        # Public access is configured via service.yaml annotation
     id: 'update-frontend-image'
     waitFor: ['deploy-frontend']
 

@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: tru-activity-backend
   annotations:
-    run.googleapis.com/allow-unauthenticated: "true"
+    run.googleapis.com/invoker-iam-disabled: true
 spec:
   template:
     metadata:
