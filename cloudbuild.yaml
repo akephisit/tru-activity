@@ -157,13 +157,13 @@ steps:
         echo "Updating backend service.yaml with infrastructure values..."
         
         # Get Redis IP
-        REDIS_IP=$(gcloud redis instances describe tru-activity-redis --region=$_REGION --format="value(host)" 2>/dev/null || echo "10.0.0.1")
+        REDIS_IP=$$(gcloud redis instances describe tru-activity-redis --region=$_REGION --format="value(host)" 2>/dev/null || echo "10.0.0.1")
         
         # Get Cloud SQL public IP
-        SQL_IP=$(gcloud sql instances describe tru-activity-db --format="value(ipAddresses[0].ipAddress)" 2>/dev/null || echo "127.0.0.1")
+        SQL_IP=$$(gcloud sql instances describe tru-activity-db --format="value(ipAddresses[0].ipAddress)" 2>/dev/null || echo "127.0.0.1")
         
-        echo "Redis IP: $REDIS_IP"
-        echo "SQL IP: $SQL_IP"
+        echo "Redis IP: $$REDIS_IP"
+        echo "SQL IP: $$SQL_IP"
         
         # Update backend service.yaml with actual values
         # Replace any project ID patterns
@@ -173,10 +173,10 @@ steps:
         sed -i "s/asia-southeast[0-9]*/$_REGION/g" backend/service.yaml
         
         # Replace Redis IP (look for any private IP in 10.x.x.x range)
-        sed -i "s/10\.[0-9]*\.[0-9]*\.[0-9]*/$REDIS_IP/g" backend/service.yaml
+        sed -i "s/10\.[0-9]*\.[0-9]*\.[0-9]*/$$REDIS_IP/g" backend/service.yaml
         
         # Replace SQL IP (look for any public IP pattern)
-        sed -i "/DB_HOST/s/[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*/$SQL_IP/" backend/service.yaml
+        sed -i "/DB_HOST/s/[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*/$$SQL_IP/" backend/service.yaml
         
         echo "✅ Backend service.yaml updated"
     id: 'update-backend-service-yaml'
