@@ -3,7 +3,6 @@ kind: Service
 metadata:
   name: tru-activity-backend
   annotations:
-    run.googleapis.com/ingress: all
     run.googleapis.com/allow-unauthenticated: "true"
 spec:
   template:

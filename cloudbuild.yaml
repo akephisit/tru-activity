@@ -113,55 +113,32 @@ steps:
     id: 'push-frontend-latest'
     waitFor: ['build-frontend']
 
-  # Deploy frontend to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
-    args:
-      - 'run'
-      - 'deploy'
-      - 'tru-activity-frontend'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/tru-activity-frontend:$BUILD_ID'
-      - '--region'
-      - '$_REGION'
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated'
-      - '--port'
-      - '80'
-      - '--memory'
-      - '512Mi'
-      - '--cpu'
-      - '1'
-      - '--min-instances'
-      - '0'
-      - '--max-instances'
-      - '10'
-      - '--concurrency'
-      - '80'
-      - '--timeout'
-      - '300'
-      - '--set-env-vars'
-      - 'NODE_ENV=production'
-    id: 'deploy-frontend'
-    waitFor: ['push-frontend-sha']
-
-  # Set IAM policy for frontend public access
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+  # Deploy frontend to Cloud Run using service.yaml
+  - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
       - 'services'
-      - 'add-iam-policy-binding'
-      - 'tru-activity-frontend'
-      - '--region'
-      - '$_REGION'
-      - '--member'
-      - 'allUsers'
-      - '--role'
-      - 'roles/run.invoker'
-    id: 'set-frontend-iam'
+      - 'replace'
+      - 'frontend/service.yaml'
+      - '--region=$_REGION'
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+      - 'REGION=$_REGION'
+    id: 'deploy-frontend'
+    waitFor: ['push-frontend-sha']
+
+  # Update frontend service with new image
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run services update tru-activity-frontend \
+          --image=gcr.io/$PROJECT_ID/tru-activity-frontend:$BUILD_ID \
+          --region=$_REGION
+    id: 'update-frontend-image'
     waitFor: ['deploy-frontend']
+
 
   # Run health checks
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -194,7 +171,7 @@ steps:
         
         echo "Health check passed!"
     id: 'health-check'
-    waitFor: ['update-service-image']
+    waitFor: ['update-service-image', 'update-frontend-image']
 
 # Build configuration
 options:
