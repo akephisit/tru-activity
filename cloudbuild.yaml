@@ -129,34 +129,34 @@ steps:
         # Get the actual backend service URL with retry
         BACKEND_URL=""
         for i in {1..5}; do
-          BACKEND_URL=$(gcloud run services describe tru-activity-backend \
+          BACKEND_URL=$$(gcloud run services describe tru-activity-backend \
             --region=$_REGION \
             --format="value(status.url)" 2>/dev/null) || true
           
-          if [ -n "$BACKEND_URL" ]; then
+          if [ -n "$$BACKEND_URL" ]; then
             break
           fi
           
-          echo "Attempt $i: Backend service not ready, waiting 10 seconds..."
+          echo "Attempt $$i: Backend service not ready, waiting 10 seconds..."
           sleep 10
         done
         
-        if [ -z "$BACKEND_URL" ]; then
+        if [ -z "$$BACKEND_URL" ]; then
           echo "Error: Could not get backend URL after 5 attempts"
           exit 1
         fi
         
-        echo "Backend URL: $BACKEND_URL"
+        echo "Backend URL: $$BACKEND_URL"
         echo "Preparing frontend service.yaml with actual backend URL..."
         
         # Create frontend service.yaml with actual backend URL
-        sed -e "s/\$PROJECT_ID/$PROJECT_ID/g" \
-            -e "s|BACKEND_URL_PLACEHOLDER|$BACKEND_URL|g" \
-            frontend/service.yaml > /tmp/frontend-service.yaml
+        cp frontend/service.yaml /tmp/frontend-service.yaml
+        sed -i "s/\$$PROJECT_ID/$PROJECT_ID/g" /tmp/frontend-service.yaml
+        sed -i "s|BACKEND_URL_PLACEHOLDER|$$BACKEND_URL|g" /tmp/frontend-service.yaml
         
         # Show the resulting configuration for verification
-        echo "Backend URL: $BACKEND_URL"
-        echo "GraphQL URL will be: $BACKEND_URL/query"
+        echo "Backend URL: $$BACKEND_URL"
+        echo "GraphQL URL will be: $$BACKEND_URL/query"
         echo "=== Generated frontend service.yaml environment section ==="
         grep -A 10 "env:" /tmp/frontend-service.yaml || true
         echo "==========================================="
@@ -218,13 +218,11 @@ steps:
 # Build configuration
 options:
   machineType: 'E2_HIGHCPU_8'
-  substitutionOption: 'ALLOW_LOOSE'
   logging: CLOUD_LOGGING_ONLY
 
 # Substitutions
 substitutions:
   _REGION: 'asia-southeast1'
-  _HASH: '${COMMIT_SHA:0:7}'
 
 # Tags for organization
 tags:
