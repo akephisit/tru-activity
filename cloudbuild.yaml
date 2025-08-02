@@ -1,4 +1,137 @@
 steps:
+  # Setup infrastructure first
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "🏗️ Setting up infrastructure..."
+        
+        # Enable required APIs
+        echo "Enabling required APIs..."
+        gcloud services enable run.googleapis.com sqladmin.googleapis.com redis.googleapis.com \
+          cloudbuild.googleapis.com secretmanager.googleapis.com monitoring.googleapis.com \
+          logging.googleapis.com cloudtrace.googleapis.com vpcaccess.googleapis.com \
+          servicenetworking.googleapis.com compute.googleapis.com
+        
+        # Create Cloud SQL instance if not exists
+        if ! gcloud sql instances describe tru-activity-db &>/dev/null; then
+          echo "Creating Cloud SQL instance..."
+          gcloud sql instances create tru-activity-db \
+            --database-version=POSTGRES_17 \
+            --tier=db-f1-micro \
+            --edition=ENTERPRISE \
+            --region=$_REGION \
+            --root-password="$_DB_PASSWORD" \
+            --storage-size=20GB \
+            --storage-auto-increase \
+            --backup-start-time=03:00 \
+            --maintenance-window-day=SUN \
+            --maintenance-window-hour=04 \
+            --deletion-protection \
+            --authorized-networks=0.0.0.0/0 \
+            --assign-ip
+        else
+          echo "Cloud SQL instance already exists"
+        fi
+        
+        # Create Redis instance if not exists
+        if ! gcloud redis instances describe tru-activity-redis --region=$_REGION &>/dev/null; then
+          echo "Creating Redis instance..."
+          gcloud redis instances create tru-activity-redis \
+            --size=1 \
+            --region=$_REGION \
+            --redis-version=redis_7_0
+        else
+          echo "Redis instance already exists"
+        fi
+        
+        # Create VPC connector subnet if not exists
+        if ! gcloud compute networks subnets describe tru-activity-connector-subnet --region=$_REGION &>/dev/null; then
+          echo "Creating VPC connector subnet..."
+          gcloud compute networks subnets create tru-activity-connector-subnet \
+            --network=default \
+            --range=10.8.0.0/28 \
+            --region=$_REGION
+        else
+          echo "VPC connector subnet already exists"
+        fi
+        
+        # Create VPC connector if not exists
+        if ! gcloud compute networks vpc-access connectors describe tru-activity-connector --region=$_REGION &>/dev/null; then
+          echo "Creating VPC connector..."
+          gcloud compute networks vpc-access connectors create tru-activity-connector \
+            --region=$_REGION \
+            --subnet-project=$PROJECT_ID \
+            --subnet=tru-activity-connector-subnet \
+            --min-instances=2 \
+            --max-instances=10
+        else
+          echo "VPC connector already exists"
+        fi
+        
+        # Create service accounts if not exist
+        if ! gcloud iam service-accounts describe tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com &>/dev/null; then
+          echo "Creating backend service account..."
+          gcloud iam service-accounts create tru-activity-backend \
+            --display-name="TRU Activity Backend Service Account" \
+            --description="Service account for TRU Activity backend"
+          
+          # Grant IAM roles
+          gcloud projects add-iam-policy-binding $PROJECT_ID \
+            --member="serviceAccount:tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com" \
+            --role="roles/cloudsql.client" --quiet || true
+          gcloud projects add-iam-policy-binding $PROJECT_ID \
+            --member="serviceAccount:tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com" \
+            --role="roles/redis.editor" --quiet || true
+          gcloud projects add-iam-policy-binding $PROJECT_ID \
+            --member="serviceAccount:tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com" \
+            --role="roles/secretmanager.secretAccessor" --quiet || true
+          gcloud projects add-iam-policy-binding $PROJECT_ID \
+            --member="serviceAccount:tru-activity-backend@$PROJECT_ID.iam.gserviceaccount.com" \
+            --role="roles/cloudsql.instanceUser" --quiet || true
+        else
+          echo "Backend service account already exists"
+        fi
+        
+        # Create secrets with values from substitution variables
+        echo "Setting up secrets with provided values..."
+        if ! gcloud secrets describe db-password &>/dev/null; then
+          echo "Creating db-password secret..."
+          echo -n "$_DB_PASSWORD" | gcloud secrets create db-password --data-file=-
+        else
+          echo "Updating db-password secret..."
+          echo -n "$_DB_PASSWORD" | gcloud secrets versions add db-password --data-file=-
+        fi
+        
+        if ! gcloud secrets describe jwt-secret &>/dev/null; then
+          echo "Creating jwt-secret..."
+          echo -n "$_JWT_SECRET" | gcloud secrets create jwt-secret --data-file=-
+        else
+          echo "Updating jwt-secret..."
+          echo -n "$_JWT_SECRET" | gcloud secrets versions add jwt-secret --data-file=-
+        fi
+        
+        if ! gcloud secrets describe qr-secret &>/dev/null; then
+          echo "Creating qr-secret..."
+          echo -n "$_QR_SECRET" | gcloud secrets create qr-secret --data-file=-
+        else
+          echo "Updating qr-secret..."
+          echo -n "$_QR_SECRET" | gcloud secrets versions add qr-secret --data-file=-
+        fi
+        
+        if ! gcloud secrets describe sendgrid-api-key &>/dev/null; then
+          echo "Creating sendgrid-api-key secret..."
+          echo -n "$_SENDGRID_API_KEY" | gcloud secrets create sendgrid-api-key --data-file=-
+        else
+          echo "Updating sendgrid-api-key secret..."
+          echo -n "$_SENDGRID_API_KEY" | gcloud secrets versions add sendgrid-api-key --data-file=-
+        fi
+        
+        echo "✅ Infrastructure setup completed"
+    id: 'setup-infrastructure'
+
   # Validate Dockerfile and context
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
@@ -12,6 +145,42 @@ steps:
         echo "Checking go.mod..."
         cat backend/go.mod | head -10
     id: 'validate-context'
+    waitFor: ['setup-infrastructure']
+
+  # Update backend service.yaml with infrastructure values
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "Updating backend service.yaml with infrastructure values..."
+        
+        # Get Redis IP
+        REDIS_IP=$(gcloud redis instances describe tru-activity-redis --region=$_REGION --format="value(host)" 2>/dev/null || echo "10.0.0.1")
+        
+        # Get Cloud SQL public IP
+        SQL_IP=$(gcloud sql instances describe tru-activity-db --format="value(ipAddresses[0].ipAddress)" 2>/dev/null || echo "127.0.0.1")
+        
+        echo "Redis IP: $REDIS_IP"
+        echo "SQL IP: $SQL_IP"
+        
+        # Update backend service.yaml with actual values
+        # Replace any project ID patterns
+        sed -i "s/tru-activity-[0-9]*/$PROJECT_ID/g" backend/service.yaml
+        
+        # Replace region patterns
+        sed -i "s/asia-southeast[0-9]*/$_REGION/g" backend/service.yaml
+        
+        # Replace Redis IP (look for any private IP in 10.x.x.x range)
+        sed -i "s/10\.[0-9]*\.[0-9]*\.[0-9]*/$REDIS_IP/g" backend/service.yaml
+        
+        # Replace SQL IP (look for any public IP pattern)
+        sed -i "/DB_HOST/s/[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*/$SQL_IP/" backend/service.yaml
+        
+        echo "✅ Backend service.yaml updated"
+    id: 'update-backend-service-yaml'
+    waitFor: ['validate-context']
 
   # Build backend Docker image
   - name: 'gcr.io/cloud-builders/docker'
@@ -24,7 +193,7 @@ steps:
       - 'gcr.io/$PROJECT_ID/tru-activity-backend:latest'
       - './backend'
     id: 'build-backend'
-    waitFor: ['validate-context']
+    waitFor: ['update-backend-service-yaml']
 
   # Push backend images
   - name: 'gcr.io/cloud-builders/docker'
@@ -220,9 +389,13 @@ options:
   machineType: 'E2_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
 
-# Substitutions
+# Substitutions (override these in Cloud Build Trigger)
 substitutions:
   _REGION: 'asia-southeast1'
+  _DB_PASSWORD: 'CHANGE_ME'
+  _JWT_SECRET: 'CHANGE_ME'
+  _QR_SECRET: 'CHANGE_ME'
+  _SENDGRID_API_KEY: 'CHANGE_ME'
 
 # Tags for organization
 tags:
