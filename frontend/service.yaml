@@ -26,6 +26,10 @@ spec:
           env:
             - name: NODE_ENV
               value: "production"
+            - name: PUBLIC_API_URL
+              value: "$_BACKEND_URL"
+            - name: PUBLIC_GRAPHQL_URL
+              value: "$_BACKEND_URL/query"
           resources:
             limits:
               cpu: "1"

@@ -113,19 +113,43 @@ steps:
     id: 'push-frontend-latest'
     waitFor: ['build-frontend']
 
-  # Deploy frontend to Cloud Run using service.yaml
+  # Get backend URL and prepare frontend service.yaml
   - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
     args:
-      - 'run'
-      - 'services'
-      - 'replace'
-      - 'frontend/service.yaml'
-      - '--region=$_REGION'
+      - '-c'
+      - |
+        set -e
+        echo "Getting backend service URL..."
+        
+        # Get the actual backend service URL
+        BACKEND_URL=$(gcloud run services describe tru-activity-backend \
+          --region=$_REGION \
+          --format="value(status.url)")
+        
+        if [ -z "$BACKEND_URL" ]; then
+          echo "Error: Could not get backend URL"
+          exit 1
+        fi
+        
+        echo "Backend URL: $BACKEND_URL"
+        echo "Preparing frontend service.yaml with actual backend URL..."
+        
+        # Create frontend service.yaml with actual backend URL
+        sed -e "s/\$PROJECT_ID/$PROJECT_ID/g" \
+            -e "s|\$_BACKEND_URL|$BACKEND_URL|g" \
+            frontend/service.yaml > /tmp/frontend-service.yaml
+        
+        # Show the resulting URL for verification
+        echo "GraphQL URL will be: $BACKEND_URL/query"
+        
+        # Deploy frontend with actual backend URL
+        gcloud run services replace /tmp/frontend-service.yaml --region=$_REGION
     env:
       - 'PROJECT_ID=$PROJECT_ID'
       - 'REGION=$_REGION'
     id: 'deploy-frontend'
-    waitFor: ['push-frontend-sha']
+    waitFor: ['push-frontend-sha', 'update-service-image']
 
   # Update frontend service with new image
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -183,7 +207,6 @@ options:
 substitutions:
   _REGION: 'asia-southeast1'
   _HASH: '${COMMIT_SHA:0:7}'
-  _PROJECT_ID: '$PROJECT_ID'
 
 # Tags for organization
 tags:
