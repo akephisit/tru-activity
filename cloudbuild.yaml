@@ -122,13 +122,27 @@ steps:
         set -e
         echo "Getting backend service URL..."
         
-        # Get the actual backend service URL
-        BACKEND_URL=$(gcloud run services describe tru-activity-backend \
-          --region=$_REGION \
-          --format="value(status.url)")
+        # Wait a moment for backend service to be ready
+        echo "Waiting for backend service to be ready..."
+        sleep 10
+        
+        # Get the actual backend service URL with retry
+        BACKEND_URL=""
+        for i in {1..5}; do
+          BACKEND_URL=$(gcloud run services describe tru-activity-backend \
+            --region=$_REGION \
+            --format="value(status.url)" 2>/dev/null) || true
+          
+          if [ -n "$BACKEND_URL" ]; then
+            break
+          fi
+          
+          echo "Attempt $i: Backend service not ready, waiting 10 seconds..."
+          sleep 10
+        done
         
         if [ -z "$BACKEND_URL" ]; then
-          echo "Error: Could not get backend URL"
+          echo "Error: Could not get backend URL after 5 attempts"
           exit 1
         fi
         
@@ -140,8 +154,12 @@ steps:
             -e "s|\$_BACKEND_URL|$BACKEND_URL|g" \
             frontend/service.yaml > /tmp/frontend-service.yaml
         
-        # Show the resulting URL for verification
+        # Show the resulting configuration for verification
+        echo "Backend URL: $BACKEND_URL"
         echo "GraphQL URL will be: $BACKEND_URL/query"
+        echo "=== Generated frontend service.yaml environment section ==="
+        grep -A 10 "env:" /tmp/frontend-service.yaml || true
+        echo "==========================================="
         
         # Deploy frontend with actual backend URL
         gcloud run services replace /tmp/frontend-service.yaml --region=$_REGION

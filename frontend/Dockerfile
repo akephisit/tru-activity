@@ -44,8 +44,9 @@ USER sveltekit
 # Expose port (Cloud Run will set PORT via env var)
 EXPOSE 80
 
-# Set environment variables (let Cloud Run set PORT)
+# Set environment variables
 ENV HOST=0.0.0.0
+ENV PORT=80
 ENV NODE_ENV=production
 
 # Health check
