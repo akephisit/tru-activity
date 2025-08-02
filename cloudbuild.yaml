@@ -34,7 +34,10 @@ steps:
             --authorized-networks=0.0.0.0/0 \
             --assign-ip
         else
-          echo "Cloud SQL instance already exists"
+          echo "Cloud SQL instance already exists, updating postgres password..."
+          gcloud sql users set-password postgres \
+            --instance=tru-activity-db \
+            --password="$_DB_PASSWORD" || echo "Failed to update postgres password"
         fi
         
         # Create Redis instance if not exists
